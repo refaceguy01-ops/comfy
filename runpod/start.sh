@@ -11,8 +11,11 @@ COMFY="$WORKSPACE/ComfyUI"
 export COMFY_DIR="$COMFY"
 export HF_HOME="$WORKSPACE/.hf_cache"
 # Never trust a venv left on the volume by a previous pod — always use this
-# pod's system python (the runpod/pytorch images ship torch in it).
-export COMFY_FORCE_SYSTEM_PYTHON=1
+# pod's system python (the runpod/pytorch images ship torch in it). Resolve
+# it to an absolute path NOW, while PATH is still the shell's (under `uv run`,
+# `which python3` would find uv's own pip-less interpreter instead).
+export COMFY_SYSTEM_PYTHON="$(command -v python3)"
+echo "[start.sh] Pinned ComfyUI python: $COMFY_SYSTEM_PYTHON"
 
 mkdir -p "$WORKSPACE"
 cd "$REPO_DIR"
@@ -70,7 +73,7 @@ fi
 #    points at the previous pod's interpreter) — make sure ComfyUI's own deps
 #    exist in whatever python we're about to launch with.
 cd "$COMFY"
-PYBIN="python3"
+PYBIN="$COMFY_SYSTEM_PYTHON"
 echo "[start.sh] Ensuring ComfyUI requirements in $PYBIN..."
 "$PYBIN" -m pip install -r "$COMFY/requirements.txt" || true
 # the web UI ships as separate packages — make sure they really landed
@@ -78,4 +81,6 @@ echo "[start.sh] Ensuring ComfyUI requirements in $PYBIN..."
 "$PYBIN" -m pip install --upgrade comfyui-frontend-package \
     comfyui-workflow-templates comfyui-embedded-docs || true
 echo "[start.sh] Starting ComfyUI on :8188"
-exec "$PYBIN" main.py --listen 0.0.0.0 --port 8188
+# --enable-cors-header: ComfyUI's host/origin check 403s behind RunPod's
+# proxy (github.com/Comfy-Org/ComfyUI/issues/4865); this flag relaxes it.
+exec "$PYBIN" main.py --listen 0.0.0.0 --port 8188 --enable-cors-header

@@ -101,13 +101,12 @@ def _github_zip(repo: str, dest_parent: Path, dest_name: str | None = None) -> P
 
 def comfy_python(comfy_root: Path) -> list[str]:
     """The Python that runs this ComfyUI (portable builds bundle their own)."""
-    # Cloud pods: a venv on the network volume was built against a previous
-    # pod's interpreter and half-works after migration. start.sh sets this to
-    # pin everything to the pod's system python (which ships with torch).
-    if os.environ.get("COMFY_FORCE_SYSTEM_PYTHON"):
-        system = shutil.which("python3") or shutil.which("python")
-        if system:
-            return [system]
+    # Cloud pods: start.sh resolves the pod's real system python (by absolute
+    # path, BEFORE uv prepends its own pip-less python to PATH) and pins it
+    # here. Never rely on `which python3` under `uv run` — it finds uv's env.
+    pinned = os.environ.get("COMFY_SYSTEM_PYTHON")
+    if pinned and Path(pinned).exists():
+        return [pinned]
     embedded = comfy_root.parent / "python_embeded" / "python.exe"
     if embedded.exists():
         return [str(embedded)]
