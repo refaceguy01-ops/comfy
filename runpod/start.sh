@@ -62,8 +62,14 @@ else
     uv run --python 3.12 provision.py --comfy-dir "$COMFY" workflows || true
 fi
 
-# 4. Launch ComfyUI for the pod's Connect button (port 8188)
+# 4. Launch ComfyUI for the pod's Connect button (port 8188).
+#    Fresh/migrated pods have bare system pythons (and any venv on the volume
+#    points at the previous pod's interpreter) — make sure ComfyUI's own deps
+#    exist in whatever python we're about to launch with.
 cd "$COMFY"
 PYBIN="$COMFY/venv/bin/python"
 [ -x "$PYBIN" ] || PYBIN="python3"
+echo "[start.sh] Ensuring ComfyUI requirements in $PYBIN..."
+"$PYBIN" -m pip install -q -r "$COMFY/requirements.txt" || true
+echo "[start.sh] Starting ComfyUI on :8188"
 exec "$PYBIN" main.py --listen 0.0.0.0 --port 8188
