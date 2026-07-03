@@ -1,0 +1,7 @@
+# shell scripts must stay LF or they break on Linux/Mac
+*.sh text eol=lf
+*.command text eol=lf
+Dockerfile text eol=lf
+# batch files must stay CRLF
+*.bat text eol=crlf
+* text=auto
