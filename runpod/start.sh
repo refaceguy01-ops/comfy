@@ -55,7 +55,9 @@ if [ ! -f "$REPO_DIR/.env" ] || ! grep -q "CIVITAI_API_TOKEN=." "$REPO_DIR/.env"
     done
     kill "$WIZARD_PID" 2>/dev/null || true
 else
-    # 3. Idempotent sync: fills gaps, skips verified files (fast when complete)
+    # 3. Idempotent sync: fills gaps, skips verified files (fast when complete);
+    #    re-check node packs too (repairs partial first-boot installs)
+    uv run --python 3.12 provision.py --comfy-dir "$COMFY" nodes || true
     uv run --python 3.12 provision.py --profile cloud --comfy-dir "$COMFY" sync || true
     uv run --python 3.12 provision.py --comfy-dir "$COMFY" workflows || true
 fi

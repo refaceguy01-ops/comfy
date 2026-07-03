@@ -85,6 +85,15 @@ def cmd_install(args):
     print(f"ComfyUI ready at {root}")
 
 
+def cmd_nodes(args):
+    """(Re)install custom node packs + their python deps into ComfyUI's python."""
+    root = _resolve_comfy(args)
+    failures = comfy.install_custom_nodes(root)
+    for f in failures:
+        print(f"  ! {f}")
+    print("node packs done" + (f" ({len(failures)} failed)" if failures else ""))
+
+
 def cmd_sync(args):
     root = _resolve_comfy(args)
     profile = _resolve_profile(args)
@@ -160,7 +169,7 @@ def main(argv=None):
     parser.add_argument("--required-only", action="store_true",
                         help="skip entries tagged optional")
     sub = parser.add_subparsers(dest="command")
-    for name in ("install", "sync", "download", "dry-run", "verify", "workflows"):
+    for name in ("install", "sync", "download", "dry-run", "verify", "workflows", "nodes"):
         sub.add_parser(name)
     p_lora = sub.add_parser("add-lora")
     p_lora.add_argument("url")
@@ -174,7 +183,7 @@ def main(argv=None):
     handlers = {
         "install": cmd_install, "sync": cmd_sync, "download": cmd_sync,
         "dry-run": cmd_dry_run, "verify": cmd_verify, "workflows": cmd_workflows,
-        "add-lora": cmd_add_lora, "wizard": cmd_wizard,
+        "nodes": cmd_nodes, "add-lora": cmd_add_lora, "wizard": cmd_wizard,
     }
     command = args.command or "wizard"
     if command == "wizard" and not hasattr(args, "port"):

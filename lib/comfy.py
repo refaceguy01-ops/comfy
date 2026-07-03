@@ -108,6 +108,12 @@ def comfy_python(comfy_root: Path) -> list[str]:
     for cand in (venv / "bin" / "python", venv / "Scripts" / "python.exe"):
         if cand.exists():
             return [str(cand)]
+    # No venv (e.g. cloud template with a system-wide ComfyUI): use the system
+    # python — NOT sys.executable, which under `uv run` is an ephemeral env
+    # without pip that ComfyUI doesn't run from.
+    system = shutil.which("python3") or shutil.which("python")
+    if system:
+        return [system]
     return [sys.executable]
 
 
