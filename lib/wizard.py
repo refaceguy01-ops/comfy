@@ -272,11 +272,12 @@ let S={};
 async function api(p,body){const r=await fetch(p,body?{method:'POST',
   headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
   return r.json();}
-async function refresh(){S=await api('/api/state');route();}
+async function refresh(){const keep=S.install;S=await api('/api/state');
+ S.install=keep&&!S.comfy_dir;route();}
 function esc(t){const d=document.createElement('div');d.textContent=t||'';return d.innerHTML;}
 
 function route(){
-  if(!S.comfy_dir) return showComfy();
+  if(!S.comfy_dir&&!S.install) return showComfy();
   if(!S.civitai_key_set||(S.hf_needed&&!S.hf_key_set)) return showKeys();
   if(S.missing_count===0) return showMenu();
   showConfirm();
@@ -341,7 +342,9 @@ function showProgress(){$('#app').innerHTML=`
  <h2 id="ph">Working…</h2><div class="bar"><div id="fill"></div></div>
  <p id="pmsg" class="muted"></p><p id="perr" class="bad"></p>
  <div id="pdone" class="hidden">
-  <button onclick="launch()">🚀 Launch ComfyUI now</button></div>`;
+  <button onclick="launch()">🚀 Launch ComfyUI now</button></div>
+ <div id="pretry" class="hidden">
+  <button class="alt" onclick="location.reload()">← Start over</button></div>`;
  poll();}
 async function poll(){const p=await api('/api/progress');
  $('#pmsg').textContent=p.message;
@@ -349,7 +352,8 @@ async function poll(){const p=await api('/api/progress');
  $('#perr').innerHTML=(p.errors||[]).map(esc).join('<br>');
  if(p.phase==='done'){$('#ph').textContent='✅ All done!';
    $('#fill').style.width='100%';$('#pdone').classList.remove('hidden');}
- else if(p.phase==='error'){$('#ph').textContent='⚠ Almost';}
+ else if(p.phase==='error'){$('#ph').textContent='⚠ Almost';
+   $('#pretry').classList.remove('hidden');}
  else setTimeout(poll,1500);}
 
 function showMenu(){$('#app').innerHTML=`
