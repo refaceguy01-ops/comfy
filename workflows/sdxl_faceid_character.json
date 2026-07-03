@@ -390,7 +390,7 @@
     "Node name for S&R": "IPAdapter"
    },
    "widgets_values": [
-    0.6,
+    0.5,
     0.0,
     1.0,
     "standard"
@@ -432,7 +432,7 @@
     "Node name for S&R": "CLIPTextEncode"
    },
    "widgets_values": [
-    "cinematic medium shot of the character on a rainy street at night, film still, shallow depth of field"
+    "candid medium shot photo of the character on a rainy street at night, shot on Canon EOS 5D, cinematic lighting, natural skin texture, film grain, shallow depth of field"
    ],
    "title": "Positive prompt (the new shot)"
   },
@@ -471,7 +471,7 @@
     "Node name for S&R": "CLIPTextEncode"
    },
    "widgets_values": [
-    "blurry, low quality, watermark, text, deformed, bad anatomy, extra fingers, jpeg artifacts"
+    "cgi, 3d render, cartoon, anime, illustration, painting, airbrushed plastic skin, oversaturated, deformed, bad anatomy, extra fingers, watermark, text, blurry, lowres"
    ],
    "title": "Negative prompt"
   },
@@ -609,8 +609,8 @@
     1234567890,
     "randomize",
     30,
-    5.5,
-    "dpmpp_2m",
+    3.5,
+    "dpmpp_2m_sde",
     "karras",
     0.7
    ],

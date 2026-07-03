@@ -143,8 +143,9 @@ def _files(manifest: Manifest) -> dict:
 
 NEG_VIDEO = ("blurry, low quality, distorted, deformed, static, watermark, text, "
              "jpeg artifacts, ugly, extra limbs")
-NEG_IMAGE = ("blurry, low quality, watermark, text, deformed, bad anatomy, "
-             "extra fingers, jpeg artifacts")
+NEG_IMAGE = ("cgi, 3d render, cartoon, anime, illustration, painting, airbrushed "
+             "plastic skin, oversaturated, deformed, bad anatomy, extra fingers, "
+             "watermark, text, blurry, lowres")
 
 
 # ─────────────────────────── video workflows ───────────────────────────
@@ -358,8 +359,13 @@ def sdxl_img2img_reference(manifest: Manifest) -> dict:
         "CONTROLNET (bypassed by default): un-bypass the 3 green nodes to force the "
         "pose/depth/edges of the reference. Pick the mode in AIO preprocessor + "
         "SetUnionControlNetType (openpose / depth / canny).\n\n"
-        "IP-ADAPTER weight 0.7: raise toward 0.8 to cling to the reference, lower "
-        "toward 0.6 to give the prompt more say."]
+        "IP-ADAPTER weight 0.5: raise toward 0.7 to cling to the reference, lower "
+        "or bypass to let the prompt lead.\n\n"
+        "LUSTIFY rules (from the model author): keep CFG between 2.5 and 4.5 — "
+        "higher fries the image. Camera tags boost realism: 'shot on Canon EOS 5D', "
+        "'shot on Kodak Funsaver', 'shot on Polaroid SX-70'. Keep prompts short and "
+        "concrete. Faces in wide/distant shots warp on ANY SDXL model — get closer "
+        "or inpaint the face after."]
 
     ref = g.add("LoadImage", (-80, 0), widgets=["reference.png", "image"],
                 title="Reference image", size=(340, 320))
@@ -372,11 +378,13 @@ def sdxl_img2img_reference(manifest: Manifest) -> dict:
                  title="LoRA stack (bypassed - pick a file + enable)")
     ipl = g.add("IPAdapterUnifiedLoader", (680, 380), widgets=["PLUS (high strength)"],
                 title="IP-Adapter loader")
-    ipa = g.add("IPAdapter", (1060, 380), widgets=[0.7, 0.0, 1.0, "standard"],
-                title="IP-Adapter (reference transfer, weight 0.6-0.8)")
+    ipa = g.add("IPAdapter", (1060, 380), widgets=[0.5, 0.0, 1.0, "prompt is more important"],
+                title="IP-Adapter (reference transfer, weight 0.4-0.6)")
 
     pos = g.add("CLIPTextEncode", (300, 620), widgets=[
-        "photograph, natural skin texture, detailed, soft window light"],
+        "candid amateur photo of the subject, shot on Canon EOS 5D, natural window "
+        "light, detailed skin texture with pores, film grain, shallow depth of "
+        "field, realistic color grading"],
         title="Positive prompt (what to change / keep)", size=(400, 150))
     neg = g.add("CLIPTextEncode", (300, 820), widgets=[NEG_IMAGE],
                 title="Negative prompt", size=(400, 110))
@@ -398,13 +406,13 @@ def sdxl_img2img_reference(manifest: Manifest) -> dict:
     enc = g.add("VAEEncode", (680, 60), title="Reference -> latent")
 
     ks = g.add("KSampler", (1500, 380),
-               widgets=[1234567890, "randomize", 30, 5.5, "dpmpp_2m", "karras", 0.55],
+               widgets=[1234567890, "randomize", 30, 3.5, "dpmpp_2m_sde", "karras", 0.55],
                title="Main sampler — DENOISE IS THE DIAL", size=(320, 280))
-    up_lat = g.add("LatentUpscaleBy", (1500, 720), widgets=["nearest-exact", 1.5],
+    up_lat = g.add("LatentUpscaleBy", (1500, 720), widgets=["bislerp", 1.5],
                    title="Hires 1.5x")
     ks2 = g.add("KSampler", (1860, 380),
-                widgets=[1234567890, "fixed", 24, 5.0, "dpmpp_2m", "karras", 0.45],
-                title="Hires pass (denoise <= 0.5)", size=(320, 280))
+                widgets=[1234567890, "fixed", 24, 3.5, "dpmpp_2m_sde", "karras", 0.4],
+                title="Hires pass (denoise ~0.4)", size=(320, 280))
     dec = g.add("VAEDecode", (2220, 380))
     upm = g.add("UpscaleModelLoader", (2220, 520),
                 widgets=[f.get("4x-ultrasharp", "4xUltrasharp_4xUltrasharpV10.pt")])
@@ -478,12 +486,13 @@ def sdxl_faceid_character(manifest: Manifest) -> dict:
                 title="FaceID (locks the face)", size=(320, 260))
     ipl = g.add("IPAdapterUnifiedLoader", (1060, 700), widgets=["PLUS (high strength)"],
                 title="IP-Adapter loader (body/style)")
-    ipa = g.add("IPAdapter", (1440, 700), widgets=[0.6, 0.0, 1.0, "standard"],
+    ipa = g.add("IPAdapter", (1440, 700), widgets=[0.5, 0.0, 1.0, "standard"],
                 title="IP-Adapter (body/style transfer)")
 
     pos = g.add("CLIPTextEncode", (300, 1020), widgets=[
-        "cinematic medium shot of the character on a rainy street at night, "
-        "film still, shallow depth of field"],
+        "candid medium shot photo of the character on a rainy street at night, "
+        "shot on Canon EOS 5D, cinematic lighting, natural skin texture, film "
+        "grain, shallow depth of field"],
         title="Positive prompt (the new shot)", size=(420, 150))
     neg = g.add("CLIPTextEncode", (300, 1220), widgets=[NEG_IMAGE],
                 title="Negative prompt", size=(420, 110))
@@ -493,7 +502,7 @@ def sdxl_faceid_character(manifest: Manifest) -> dict:
     enc = g.add("VAEEncode", (680, 380), title="Body ref -> latent")
 
     ks = g.add("KSampler", (1820, 700),
-               widgets=[1234567890, "randomize", 30, 5.5, "dpmpp_2m", "karras", 0.7],
+               widgets=[1234567890, "randomize", 30, 3.5, "dpmpp_2m_sde", "karras", 0.7],
                title="Sampler (denoise 0.7 = new shot, same character)", size=(320, 280))
     dec = g.add("VAEDecode", (2180, 700))
     upm = g.add("UpscaleModelLoader", (2180, 840),

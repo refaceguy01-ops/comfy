@@ -23,7 +23,7 @@
    "color": "#432",
    "bgcolor": "#653",
    "widgets_values": [
-    "SDXL REFERENCE IMG2IMG \u2014 the workhorse image workflow.\n\nLoad a reference image; the IP-Adapter carries its subject/style into the result, and the KSampler's DENOISE dial decides how far to stray from it:\n   0.30  subtle variation (same scene, cleaned up)\n   0.55  balanced re-imagining  (DEFAULT)\n   0.75  heavy re-imagining (keeps subject, new scene)\n\nCHECKPOINT: LUSTIFY by default \u2014 switch it in the loader if you add other checkpoints. LORA: the LoRA node is bypassed; pick your file and un-bypass to use (default weight 0.7).\n\nCONTROLNET (bypassed by default): un-bypass the 3 green nodes to force the pose/depth/edges of the reference. Pick the mode in AIO preprocessor + SetUnionControlNetType (openpose / depth / canny).\n\nIP-ADAPTER weight 0.7: raise toward 0.8 to cling to the reference, lower toward 0.6 to give the prompt more say."
+    "SDXL REFERENCE IMG2IMG \u2014 the workhorse image workflow.\n\nLoad a reference image; the IP-Adapter carries its subject/style into the result, and the KSampler's DENOISE dial decides how far to stray from it:\n   0.30  subtle variation (same scene, cleaned up)\n   0.55  balanced re-imagining  (DEFAULT)\n   0.75  heavy re-imagining (keeps subject, new scene)\n\nCHECKPOINT: LUSTIFY by default \u2014 switch it in the loader if you add other checkpoints. LORA: the LoRA node is bypassed; pick your file and un-bypass to use (default weight 0.7).\n\nCONTROLNET (bypassed by default): un-bypass the 3 green nodes to force the pose/depth/edges of the reference. Pick the mode in AIO preprocessor + SetUnionControlNetType (openpose / depth / canny).\n\nIP-ADAPTER weight 0.5: raise toward 0.7 to cling to the reference, lower or bypass to let the prompt lead.\n\nLUSTIFY rules (from the model author): keep CFG between 2.5 and 4.5 \u2014 higher fries the image. Camera tags boost realism: 'shot on Canon EOS 5D', 'shot on Kodak Funsaver', 'shot on Polaroid SX-70'. Keep prompts short and concrete. Faces in wide/distant shots warp on ANY SDXL model \u2014 get closer or inpaint the face after."
    ]
   },
   {
@@ -276,12 +276,12 @@
     "Node name for S&R": "IPAdapter"
    },
    "widgets_values": [
-    0.7,
+    0.5,
     0.0,
     1.0,
-    "standard"
+    "prompt is more important"
    ],
-   "title": "IP-Adapter (reference transfer, weight 0.6-0.8)"
+   "title": "IP-Adapter (reference transfer, weight 0.4-0.6)"
   },
   {
    "id": 7,
@@ -318,7 +318,7 @@
     "Node name for S&R": "CLIPTextEncode"
    },
    "widgets_values": [
-    "photograph, natural skin texture, detailed, soft window light"
+    "candid amateur photo of the subject, shot on Canon EOS 5D, natural window light, detailed skin texture with pores, film grain, shallow depth of field, realistic color grading"
    ],
    "title": "Positive prompt (what to change / keep)"
   },
@@ -357,7 +357,7 @@
     "Node name for S&R": "CLIPTextEncode"
    },
    "widgets_values": [
-    "blurry, low quality, watermark, text, deformed, bad anatomy, extra fingers, jpeg artifacts"
+    "cgi, 3d render, cartoon, anime, illustration, painting, airbrushed plastic skin, oversaturated, deformed, bad anatomy, extra fingers, watermark, text, blurry, lowres"
    ],
    "title": "Negative prompt"
   },
@@ -673,8 +673,8 @@
     1234567890,
     "randomize",
     30,
-    5.5,
-    "dpmpp_2m",
+    3.5,
+    "dpmpp_2m_sde",
     "karras",
     0.55
    ],
@@ -715,7 +715,7 @@
     "Node name for S&R": "LatentUpscaleBy"
    },
    "widgets_values": [
-    "nearest-exact",
+    "bislerp",
     1.5
    ],
    "title": "Hires 1.5x"
@@ -773,12 +773,12 @@
     1234567890,
     "fixed",
     24,
-    5.0,
-    "dpmpp_2m",
+    3.5,
+    "dpmpp_2m_sde",
     "karras",
-    0.45
+    0.4
    ],
-   "title": "Hires pass (denoise <= 0.5)"
+   "title": "Hires pass (denoise ~0.4)"
   },
   {
    "id": 18,
