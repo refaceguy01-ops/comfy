@@ -19,6 +19,7 @@ ALLOWED_DESTS = {
     "models/diffusion_models", "models/checkpoints", "models/loras",
     "models/vae", "models/text_encoders", "models/clip_vision",
     "models/ipadapter", "models/controlnet", "models/upscale_models",
+    "models/foley",
 }
 
 

@@ -1,6 +1,6 @@
 {
- "last_node_id": 17,
- "last_link_id": 21,
+ "last_node_id": 20,
+ "last_link_id": 25,
  "nodes": [
   {
    "id": 1,
@@ -631,7 +631,8 @@
      "name": "IMAGE",
      "type": "IMAGE",
      "links": [
-      20
+      20,
+      24
      ],
      "slot_index": 0
     }
@@ -686,9 +687,140 @@
   },
   {
    "id": 17,
-   "type": "VHS_VideoCombine",
+   "type": "HunyuanModelLoader",
+   "pos": [
+    1900,
+    800
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 16,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "HUNYUAN_MODEL",
+     "type": "HUNYUAN_MODEL",
+     "links": [
+      22
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "HunyuanModelLoader"
+   },
+   "widgets_values": [
+    "hunyuanvideo_foley_fp8_e4m3fn.safetensors",
+    "bf16",
+    "auto"
+   ],
+   "title": "Foley model (audio)"
+  },
+  {
+   "id": 18,
+   "type": "HunyuanDependenciesLoader",
+   "pos": [
+    1900,
+    940
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 17,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "HUNYUAN_DEPS",
+     "type": "HUNYUAN_DEPS",
+     "links": [
+      23
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "HunyuanDependenciesLoader"
+   },
+   "widgets_values": [
+    "vae_128d_48k_fp16.safetensors",
+    "synchformer_state_dict_fp16.safetensors"
+   ],
+   "title": "Foley helpers"
+  },
+  {
+   "id": 19,
+   "type": "HunyuanFoleySampler",
    "pos": [
     2280,
+    800
+   ],
+   "size": [
+    340,
+    320
+   ],
+   "flags": {},
+   "order": 18,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "hunyuan_model",
+     "type": "HUNYUAN_MODEL",
+     "link": 22
+    },
+    {
+     "name": "hunyuan_deps",
+     "type": "HUNYUAN_DEPS",
+     "link": 23
+    },
+    {
+     "name": "image",
+     "type": "IMAGE",
+     "link": 24
+    }
+   ],
+   "outputs": [
+    {
+     "name": "audio_first",
+     "type": "AUDIO",
+     "links": [
+      25
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "audio_batch",
+     "type": "AUDIO",
+     "links": [],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "HunyuanFoleySampler"
+   },
+   "widgets_values": [
+    16.0,
+    5.1,
+    "",
+    "noisy, harsh, distorted, music",
+    4.5,
+    50,
+    "euler",
+    1
+   ],
+   "title": "Audio generator (watches the video; prompt optional)"
+  },
+  {
+   "id": 20,
+   "type": "VHS_VideoCombine",
+   "pos": [
+    2680,
     400
    ],
    "size": [
@@ -696,13 +828,18 @@
     340
    ],
    "flags": {},
-   "order": 16,
+   "order": 19,
    "mode": 0,
    "inputs": [
     {
      "name": "images",
      "type": "IMAGE",
      "link": 21
+    },
+    {
+     "name": "audio",
+     "type": "AUDIO",
+     "link": 25
     }
    ],
    "outputs": [
@@ -896,9 +1033,41 @@
    21,
    16,
    0,
-   17,
+   20,
    0,
    "IMAGE"
+  ],
+  [
+   22,
+   17,
+   0,
+   19,
+   0,
+   "HUNYUAN_MODEL"
+  ],
+  [
+   23,
+   18,
+   0,
+   19,
+   1,
+   "HUNYUAN_DEPS"
+  ],
+  [
+   24,
+   15,
+   0,
+   19,
+   2,
+   "IMAGE"
+  ],
+  [
+   25,
+   19,
+   0,
+   20,
+   1,
+   "AUDIO"
   ]
  ],
  "groups": [],

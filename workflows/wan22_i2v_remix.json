@@ -1,6 +1,6 @@
 {
- "last_node_id": 18,
- "last_link_id": 22,
+ "last_node_id": 21,
+ "last_link_id": 26,
  "nodes": [
   {
    "id": 1,
@@ -23,7 +23,7 @@
    "color": "#432",
    "bgcolor": "#653",
    "widgets_values": [
-    "WAN 2.2 IMAGE-TO-VIDEO (Remix v3)\n\n1. Load your START IMAGE in the Load Image node \u2014 the video begins from it.\n2. Write what should HAPPEN in the positive prompt (motion, camera, mood).\n3. Defaults: 1280x720, 81 frames @16fps, interpolated to 32fps (~5s).\n\nSPEED: the two purple LoRA nodes are the Lightning 4-step LoRAs, OFF by default. Right-click each > Bypass to toggle ON, then set BOTH samplers: steps 8, cfg 1.0 (high: start 0 end 4 / low: start 4 end 8). Quality drops a little, render time drops ~5x.\n\nIf you run out of VRAM: lower resolution to 960x544, or use the GGUF loader variant installed by the 12GB profile."
+    "WAN 2.2 IMAGE-TO-VIDEO (Remix v3)\n\n1. Load your START IMAGE in the Load Image node \u2014 the video begins from it.\n2. Write what should HAPPEN in the positive prompt (motion, camera, mood).\n3. Defaults: 1280x720, 81 frames @16fps, interpolated to 32fps (~5s).\n\nSPEED: the two purple LoRA nodes are the Lightning 4-step LoRAs, OFF by default. Right-click each > Bypass to toggle ON, then set BOTH samplers: steps 8, cfg 1.0 (high: start 0 end 4 / low: start 4 end 8). Quality drops a little, render time drops ~5x.\n\nIf you run out of VRAM: lower resolution to 960x544, or use the GGUF loader variant installed by the 12GB profile.\n\nAUDIO: the Foley nodes WATCH the finished frames and generate matching sound (48kHz) muxed into the video automatically. The audio prompt is optional \u2014 empty means purely scene-driven; type e.g. 'heavy rain on metal roof' to steer it. First audio run downloads two small helper models automatically. To render silent video, bypass the three Foley nodes."
    ]
   },
   {
@@ -666,7 +666,8 @@
      "name": "IMAGE",
      "type": "IMAGE",
      "links": [
-      21
+      21,
+      25
      ],
      "slot_index": 0
     }
@@ -721,9 +722,140 @@
   },
   {
    "id": 18,
-   "type": "VHS_VideoCombine",
+   "type": "HunyuanModelLoader",
+   "pos": [
+    1940,
+    820
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 17,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "HUNYUAN_MODEL",
+     "type": "HUNYUAN_MODEL",
+     "links": [
+      23
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "HunyuanModelLoader"
+   },
+   "widgets_values": [
+    "hunyuanvideo_foley_fp8_e4m3fn.safetensors",
+    "bf16",
+    "auto"
+   ],
+   "title": "Foley model (audio)"
+  },
+  {
+   "id": 19,
+   "type": "HunyuanDependenciesLoader",
+   "pos": [
+    1940,
+    960
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 18,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "HUNYUAN_DEPS",
+     "type": "HUNYUAN_DEPS",
+     "links": [
+      24
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "HunyuanDependenciesLoader"
+   },
+   "widgets_values": [
+    "vae_128d_48k_fp16.safetensors",
+    "synchformer_state_dict_fp16.safetensors"
+   ],
+   "title": "Foley helpers"
+  },
+  {
+   "id": 20,
+   "type": "HunyuanFoleySampler",
    "pos": [
     2320,
+    820
+   ],
+   "size": [
+    340,
+    320
+   ],
+   "flags": {},
+   "order": 19,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "hunyuan_model",
+     "type": "HUNYUAN_MODEL",
+     "link": 23
+    },
+    {
+     "name": "hunyuan_deps",
+     "type": "HUNYUAN_DEPS",
+     "link": 24
+    },
+    {
+     "name": "image",
+     "type": "IMAGE",
+     "link": 25
+    }
+   ],
+   "outputs": [
+    {
+     "name": "audio_first",
+     "type": "AUDIO",
+     "links": [
+      26
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "audio_batch",
+     "type": "AUDIO",
+     "links": [],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "HunyuanFoleySampler"
+   },
+   "widgets_values": [
+    16.0,
+    5.1,
+    "",
+    "noisy, harsh, distorted, music",
+    4.5,
+    50,
+    "euler",
+    1
+   ],
+   "title": "Audio generator (watches the video; prompt optional)"
+  },
+  {
+   "id": 21,
+   "type": "VHS_VideoCombine",
+   "pos": [
+    2720,
     420
    ],
    "size": [
@@ -731,13 +863,18 @@
     340
    ],
    "flags": {},
-   "order": 17,
+   "order": 20,
    "mode": 0,
    "inputs": [
     {
      "name": "images",
      "type": "IMAGE",
      "link": 22
+    },
+    {
+     "name": "audio",
+     "type": "AUDIO",
+     "link": 26
     }
    ],
    "outputs": [
@@ -939,9 +1076,41 @@
    22,
    17,
    0,
-   18,
+   21,
    0,
    "IMAGE"
+  ],
+  [
+   23,
+   18,
+   0,
+   20,
+   0,
+   "HUNYUAN_MODEL"
+  ],
+  [
+   24,
+   19,
+   0,
+   20,
+   1,
+   "HUNYUAN_DEPS"
+  ],
+  [
+   25,
+   16,
+   0,
+   20,
+   2,
+   "IMAGE"
+  ],
+  [
+   26,
+   20,
+   0,
+   21,
+   1,
+   "AUDIO"
   ]
  ],
  "groups": [],

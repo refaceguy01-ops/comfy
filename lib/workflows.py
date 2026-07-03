@@ -49,7 +49,13 @@ NODE_DEFS = {
     "VAEEncode":              ([("pixels", "IMAGE"), ("vae", "VAE")], [("LATENT", "LATENT")]),
     "LatentUpscaleBy":        ([("samples", "LATENT")], [("LATENT", "LATENT")]),
     "RIFE VFI":               ([("frames", "IMAGE")], [("IMAGE", "IMAGE")]),
-    "VHS_VideoCombine":       ([("images", "IMAGE")], [("Filenames", "VHS_FILENAMES")]),
+    "VHS_VideoCombine":       ([("images", "IMAGE"), ("audio", "AUDIO")],
+                               [("Filenames", "VHS_FILENAMES")]),
+    "HunyuanModelLoader":     ([], [("HUNYUAN_MODEL", "HUNYUAN_MODEL")]),
+    "HunyuanDependenciesLoader": ([], [("HUNYUAN_DEPS", "HUNYUAN_DEPS")]),
+    "HunyuanFoleySampler":    ([("hunyuan_model", "HUNYUAN_MODEL"),
+                                ("hunyuan_deps", "HUNYUAN_DEPS"), ("image", "IMAGE")],
+                               [("audio_first", "AUDIO"), ("audio_batch", "AUDIO")]),
     "IPAdapterUnifiedLoader": ([("model", "MODEL"), ("ipadapter", "IPADAPTER")],
                                [("model", "MODEL"), ("ipadapter", "IPADAPTER")]),
     "IPAdapter":              ([("model", "MODEL"), ("ipadapter", "IPADAPTER"),
@@ -176,7 +182,13 @@ def wan22_i2v(manifest: Manifest, remix: bool = True, gguf: bool = False) -> dic
         "steps 8, cfg 1.0 (high: start 0 end 4 / low: start 4 end 8). Quality drops a "
         "little, render time drops ~5x.\n\n"
         "If you run out of VRAM: lower resolution to 960x544, or use the GGUF "
-        "loader variant installed by the 12GB profile."]
+        "loader variant installed by the 12GB profile.\n\n"
+        "AUDIO: the Foley nodes WATCH the finished frames and generate matching "
+        "sound (48kHz) muxed into the video automatically. The audio prompt is "
+        "optional — empty means purely scene-driven; type e.g. 'heavy rain on "
+        "metal roof' to steer it. First audio run downloads two small helper "
+        "models automatically. To render silent video, bypass the three Foley "
+        "nodes."]
 
     image = g.add("LoadImage", (-80, 40), widgets=["start_frame.png", "image"],
                   title="Start image (the video begins here)", size=(340, 320))
@@ -220,7 +232,22 @@ def wan22_i2v(manifest: Manifest, remix: bool = True, gguf: bool = False) -> dic
     dec = g.add("VAEDecode", (1940, 420))
     rife = g.add("RIFE VFI", (1940, 560), widgets=["rife47.pth", 10, 2, True, True, 1.0],
                  title="RIFE 16->32 fps", size=(320, 200))
-    vid = g.add("VHS_VideoCombine", (2320, 420), size=(360, 340), title="Save video")
+
+    foley_model = f.get("hunyuan-foley-fp8" if gguf else "hunyuan-foley-fp16",
+                        "hunyuanvideo_foley.safetensors")
+    fl = g.add("HunyuanModelLoader", (1940, 820),
+               widgets=[foley_model, "bf16", "auto"], title="Foley model (audio)")
+    fd = g.add("HunyuanDependenciesLoader", (1940, 960),
+               widgets=[f.get("hunyuan-foley-vae", "vae_128d_48k_fp16.safetensors"),
+                        f.get("hunyuan-foley-synchformer",
+                              "synchformer_state_dict_fp16.safetensors")],
+               title="Foley helpers")
+    fs = g.add("HunyuanFoleySampler", (2320, 820), size=(340, 320),
+               widgets=[16.0, 5.1, "", "noisy, harsh, distorted, music",
+                        4.5, 50, "euler", 1],
+               title="Audio generator (watches the video; prompt optional)")
+
+    vid = g.add("VHS_VideoCombine", (2720, 420), size=(360, 340), title="Save video")
     vid["widgets_values"] = {
         "frame_rate": 32, "loop_count": 0,
         "filename_prefix": "wan22_i2v_remix" if remix else "wan22_i2v",
@@ -250,6 +277,10 @@ def wan22_i2v(manifest: Manifest, remix: bool = True, gguf: bool = False) -> dic
     g.link(vae, "VAE", dec, "vae")
     g.link(dec, "IMAGE", rife, "frames")
     g.link(rife, "IMAGE", vid, "images")
+    g.link(fl, "HUNYUAN_MODEL", fs, "hunyuan_model")
+    g.link(fd, "HUNYUAN_DEPS", fs, "hunyuan_deps")
+    g.link(dec, "IMAGE", fs, "image")   # pre-interpolation frames @16fps
+    g.link(fs, "audio_first", vid, "audio")
     return g.to_json()
 
 
@@ -309,7 +340,22 @@ def wan22_i2v_firstlast(manifest: Manifest, gguf: bool = False) -> dict:
     dec = g.add("VAEDecode", (1900, 400))
     rife = g.add("RIFE VFI", (1900, 540), widgets=["rife47.pth", 10, 2, True, True, 1.0],
                  title="RIFE 16->32 fps", size=(320, 200))
-    vid = g.add("VHS_VideoCombine", (2280, 400), size=(360, 340), title="Save video")
+
+    foley_model = f.get("hunyuan-foley-fp8" if gguf else "hunyuan-foley-fp16",
+                        "hunyuanvideo_foley.safetensors")
+    fl = g.add("HunyuanModelLoader", (1900, 800),
+               widgets=[foley_model, "bf16", "auto"], title="Foley model (audio)")
+    fd = g.add("HunyuanDependenciesLoader", (1900, 940),
+               widgets=[f.get("hunyuan-foley-vae", "vae_128d_48k_fp16.safetensors"),
+                        f.get("hunyuan-foley-synchformer",
+                              "synchformer_state_dict_fp16.safetensors")],
+               title="Foley helpers")
+    fs = g.add("HunyuanFoleySampler", (2280, 800), size=(340, 320),
+               widgets=[16.0, 5.1, "", "noisy, harsh, distorted, music",
+                        4.5, 50, "euler", 1],
+               title="Audio generator (watches the video; prompt optional)")
+
+    vid = g.add("VHS_VideoCombine", (2680, 400), size=(360, 340), title="Save video")
     vid["widgets_values"] = {
         "frame_rate": 32, "loop_count": 0, "filename_prefix": "wan22_firstlast",
         "format": "video/h264-mp4", "pix_fmt": "yuv420p", "crf": 19,
@@ -337,6 +383,10 @@ def wan22_i2v_firstlast(manifest: Manifest, gguf: bool = False) -> dict:
     g.link(vae, "VAE", dec, "vae")
     g.link(dec, "IMAGE", rife, "frames")
     g.link(rife, "IMAGE", vid, "images")
+    g.link(fl, "HUNYUAN_MODEL", fs, "hunyuan_model")
+    g.link(fd, "HUNYUAN_DEPS", fs, "hunyuan_deps")
+    g.link(dec, "IMAGE", fs, "image")
+    g.link(fs, "audio_first", vid, "audio")
     return g.to_json()
 
 

@@ -30,6 +30,7 @@ CUSTOM_NODES = [
     ("city96/ComfyUI-GGUF", True),
     ("cubiq/ComfyUI_IPAdapter_plus", False),
     ("Fannovel16/comfyui_controlnet_aux", True),
+    ("phazei/ComfyUI-HunyuanVideo-Foley", True),
 ]
 
 COMMON_WINDOWS_PATHS = [

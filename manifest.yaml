@@ -173,6 +173,49 @@ models:
   # RIFE frame-interpolation weights are downloaded automatically by
   # ComfyUI-Frame-Interpolation on first use (node-managed, nothing to declare).
 
+  # ───────── Scene-aware audio (HunyuanVideo-Foley: video -> synced sound) ─────────
+  # SigLIP2 + CLAP helper encoders auto-download from the HF hub on first run.
+
+  - name: hunyuan-foley-fp8
+    desc: HunyuanVideo-Foley XXL fp8 (audio generation, 12GB-friendly)
+    source: huggingface
+    repo: phazei/HunyuanVideo-Foley
+    file: hunyuanvideo_foley_fp8_e4m3fn.safetensors
+    dest: models/foley
+    size_gb: 5.34
+    tags: [video, required]
+    profiles: [local-12gb]
+
+  - name: hunyuan-foley-fp16
+    desc: HunyuanVideo-Foley XXL fp16 (audio generation, full quality)
+    source: huggingface
+    repo: phazei/HunyuanVideo-Foley
+    file: hunyuanvideo_foley.safetensors
+    dest: models/foley
+    size_gb: 10.27
+    tags: [video, required]
+    profiles: [local-24gb, cloud, cloud-80gb]
+
+  - name: hunyuan-foley-synchformer
+    desc: Synchformer (audio-video sync encoder for Foley)
+    source: huggingface
+    repo: phazei/HunyuanVideo-Foley
+    file: synchformer_state_dict_fp16.safetensors
+    dest: models/foley
+    size_gb: 0.47
+    tags: [video, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: hunyuan-foley-vae
+    desc: DAC-VAE 48kHz (audio decoder for Foley)
+    source: huggingface
+    repo: phazei/HunyuanVideo-Foley
+    file: vae_128d_48k_fp16.safetensors
+    dest: models/foley
+    size_gb: 0.74
+    tags: [video, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
   # ────────────────────────── IMAGE STACK ──────────────────────────
 
   - name: chroma1-hd
