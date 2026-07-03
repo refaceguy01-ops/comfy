@@ -82,7 +82,7 @@ def _provision_thread(opts: dict):
 
         # 3. Workflows
         _set(message="Generating and installing workflows…")
-        workflows.generate_all(manifest)
+        workflows.generate_all(manifest, profile=profile)
         comfy.install_workflows(root, workflows.OUTPUT_DIR, log=lambda m: None)
 
         if report.failed:
@@ -192,7 +192,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"ok": False, "message": str(exc)})
             if self.path == "/api/workflows":
                 manifest = load_manifest()
-                workflows.generate_all(manifest)
+                profile = comfy.pick_profile(comfy.detect_gpu().get("vram_gb"))
+                workflows.generate_all(manifest, profile=profile)
                 root = config.comfy_dir()
                 if root:
                     comfy.install_workflows(root, workflows.OUTPUT_DIR, log=lambda m: None)

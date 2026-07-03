@@ -149,14 +149,19 @@ NEG_IMAGE = ("blurry, low quality, watermark, text, deformed, bad anatomy, "
 
 # ─────────────────────────── video workflows ───────────────────────────
 
-def wan22_i2v(manifest: Manifest, remix: bool = True) -> dict:
+def wan22_i2v(manifest: Manifest, remix: bool = True, gguf: bool = False) -> dict:
     f = _files(manifest)
-    if remix:
+    if gguf:  # 12GB profile ships the GGUF pair, which needs its own loader node
+        high = f.get("wan22-remix-i2v-high-gguf-q6k", "wan22RemixI2VGGUFV30_highQ6K.gguf")
+        low = f.get("wan22-remix-i2v-low-gguf-q6k", "wan22RemixI2VGGUFV30_lowQ6K.gguf")
+    elif remix:
         high = f.get("wan22-remix-i2v-high-fp8", "wan22RemixT2VI2V_i2vHighV30.safetensors")
         low = f.get("wan22-remix-i2v-low-fp8", "wan22RemixT2VI2V_i2vLowV30.safetensors")
     else:
         high = f.get("wan22-i2v-high-fp8-stock", "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors")
         low = f.get("wan22-i2v-low-fp8-stock", "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors")
+    loader = "UnetLoaderGGUF" if gguf else "UNETLoader"
+    lw = (lambda n: [n]) if gguf else (lambda n: [n, "default"])
 
     g = Graph()
     note = g.add("Note", (-80, -320), size=(460, 260), title="README — Wan 2.2 I2V")
@@ -184,9 +189,9 @@ def wan22_i2v(manifest: Manifest, remix: bool = True) -> dict:
                 title="Negative prompt", size=(400, 120))
     vae = g.add("VAELoader", (-80, 760), widgets=[f.get("wan21-vae", "wan_2.1_vae.safetensors")])
 
-    unet_hi = g.add("UNETLoader", (320, 40), widgets=[high, "default"],
+    unet_hi = g.add(loader, (320, 40), widgets=lw(high),
                     title="High-noise model (stage 1)")
-    unet_lo = g.add("UNETLoader", (320, 200), widgets=[low, "default"],
+    unet_lo = g.add(loader, (320, 200), widgets=lw(low),
                     title="Low-noise model (stage 2)")
     lora_hi = g.add("LoraLoaderModelOnly", (700, 40), mode=BYPASS,
                     widgets=[f.get("wan22-lightx2v-i2v-lora-high",
@@ -247,10 +252,16 @@ def wan22_i2v(manifest: Manifest, remix: bool = True) -> dict:
     return g.to_json()
 
 
-def wan22_i2v_firstlast(manifest: Manifest) -> dict:
+def wan22_i2v_firstlast(manifest: Manifest, gguf: bool = False) -> dict:
     f = _files(manifest)
-    high = f.get("wan22-i2v-high-fp8-stock", "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors")
-    low = f.get("wan22-i2v-low-fp8-stock", "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors")
+    if gguf:  # 12GB profile has no stock pair on disk; use the Remix GGUF files
+        high = f.get("wan22-remix-i2v-high-gguf-q6k", "wan22RemixI2VGGUFV30_highQ6K.gguf")
+        low = f.get("wan22-remix-i2v-low-gguf-q6k", "wan22RemixI2VGGUFV30_lowQ6K.gguf")
+    else:
+        high = f.get("wan22-i2v-high-fp8-stock", "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors")
+        low = f.get("wan22-i2v-low-fp8-stock", "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors")
+    loader = "UnetLoaderGGUF" if gguf else "UNETLoader"
+    lw = (lambda n: [n]) if gguf else (lambda n: [n, "default"])
 
     g = Graph()
     note = g.add("Note", (-80, -300), size=(460, 240), title="README — First/Last frame")
@@ -277,9 +288,9 @@ def wan22_i2v_firstlast(manifest: Manifest) -> dict:
                 title="Negative prompt", size=(380, 110))
     vae = g.add("VAELoader", (-80, 1000), widgets=[f.get("wan21-vae", "wan_2.1_vae.safetensors")])
 
-    unet_hi = g.add("UNETLoader", (300, 0), widgets=[high, "default"],
+    unet_hi = g.add(loader, (300, 0), widgets=lw(high),
                     title="High-noise model (stage 1)")
-    unet_lo = g.add("UNETLoader", (300, 160), widgets=[low, "default"],
+    unet_lo = g.add(loader, (300, 160), widgets=lw(low),
                     title="Low-noise model (stage 2)")
     shift_hi = g.add("ModelSamplingSD3", (700, 0), widgets=[8.0])
     shift_lo = g.add("ModelSamplingSD3", (700, 160), widgets=[8.0])
@@ -570,19 +581,21 @@ def chroma_img2img(manifest: Manifest) -> dict:
 
 
 ALL_WORKFLOWS = {
-    "wan22_i2v_remix.json": lambda m: wan22_i2v(m, remix=True),
-    "wan22_i2v_firstlast.json": wan22_i2v_firstlast,
-    "sdxl_img2img_reference.json": sdxl_img2img_reference,
-    "sdxl_faceid_character.json": sdxl_faceid_character,
-    "chroma_img2img.json": chroma_img2img,
+    "wan22_i2v_remix.json": lambda m, gguf=False: wan22_i2v(m, remix=True, gguf=gguf),
+    "wan22_i2v_firstlast.json": lambda m, gguf=False: wan22_i2v_firstlast(m, gguf=gguf),
+    "sdxl_img2img_reference.json": lambda m, gguf=False: sdxl_img2img_reference(m),
+    "sdxl_faceid_character.json": lambda m, gguf=False: sdxl_faceid_character(m),
+    "chroma_img2img.json": lambda m, gguf=False: chroma_img2img(m),
 }
 
 
-def generate_all(manifest: Manifest, out_dir: Path = OUTPUT_DIR) -> list[Path]:
+def generate_all(manifest: Manifest, out_dir: Path = OUTPUT_DIR,
+                 profile: str | None = None) -> list[Path]:
+    gguf = profile == "local-12gb"  # that profile downloads GGUF video models
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
     for filename, fn in ALL_WORKFLOWS.items():
-        data = fn(manifest)
+        data = fn(manifest, gguf=gguf)
         path = out_dir / filename
         path.write_text(json.dumps(data, indent=1), encoding="utf-8")
         written.append(path)

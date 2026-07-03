@@ -121,7 +121,7 @@ def cmd_verify(args):
 def cmd_workflows(args):
     from lib import workflows
     manifest = load_manifest()
-    written = workflows.generate_all(manifest)
+    written = workflows.generate_all(manifest, profile=_resolve_profile(args))
     print(f"generated {len(written)} workflows in {workflows.OUTPUT_DIR}")
     root = comfy.detect_comfy()
     if root:
