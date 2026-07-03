@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s --max-time 30 \"https://civitai.com/api/v1/models?query=Wan%202.2%20Remix&types=Checkpoint&limit=5\")"
+    ]
+  }
+}

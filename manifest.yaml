@@ -1,0 +1,335 @@
+# comfy-provisioner manifest — single source of truth for every downloadable asset.
+#
+# Fields per entry:
+#   name:        unique slug
+#   source:      huggingface | civitai | url
+#   repo/file:   (huggingface) repo id + path inside repo
+#   model_id/version_id/file: (civitai) numeric ids + expected filename
+#   url:         (url source) direct download link
+#   dest:        ComfyUI subfolder the file lands in
+#   rename:      optional friendlier local filename
+#   sha256:      expected hash (verified after download when present)
+#   size_gb:     approximate, for --dry-run totals
+#   tags:        video | image | required | optional
+#   profiles:    which hardware profiles pull this entry
+#
+# Profiles: local-12gb (GGUF/fp8, lean), local-24gb (fp8), cloud (fp8, 24-48GB pod),
+#           cloud-80gb (fp16 where available).
+#
+# All IDs/hashes below were resolved live from the Civitai / Hugging Face APIs on
+# 2026-07-02. `provision.py verify --refresh` re-checks them against the APIs.
+#
+# SCOPE GUARD: image-driven only. I2V video + img2img/reference image workflows.
+# No T2V or T2I model variants belong in this file.
+
+schema_version: 1
+
+models:
+  # ────────────────────────── VIDEO STACK (Wan 2.2 I2V) ──────────────────────────
+
+  - name: wan22-remix-i2v-high-fp8
+    desc: Wan 2.2 Remix v3 I2V high-noise (primary creative model, fp8)
+    source: civitai
+    model_id: 2003153
+    version_id: 2770795
+    file: wan22RemixT2VI2V_i2vHighV30.safetensors
+    dest: models/diffusion_models
+    sha256: 2AC60C97CA6911090CDBDF055B685AF3646B7BD93C19C9AAE0F86F4EA018E97D
+    size_gb: 13.31
+    tags: [video, required]
+    profiles: [local-24gb, cloud, cloud-80gb]
+
+  - name: wan22-remix-i2v-low-fp8
+    desc: Wan 2.2 Remix v3 I2V low-noise (pairs with high-noise, fp8)
+    source: civitai
+    model_id: 2003153
+    version_id: 2771407
+    file: wan22RemixT2VI2V_i2vLowV30.safetensors
+    dest: models/diffusion_models
+    sha256: A239063C377E530229C4E5B1FECDCBE9DE1201A30126DD42297435287E713229
+    size_gb: 13.31
+    tags: [video, required]
+    profiles: [local-24gb, cloud, cloud-80gb]
+
+  - name: wan22-remix-i2v-high-gguf-q6k
+    desc: Wan 2.2 Remix v3 I2V high-noise (GGUF Q6_K for 12GB cards)
+    source: civitai
+    model_id: 2472759
+    version_id: 2780951
+    file: wan22RemixI2VGGUFV30_highQ6K.gguf
+    dest: models/diffusion_models
+    sha256: EB6092D9FEEB83101613CF38360582944CD2A47C42A809FCE9974518BEC00282
+    size_gb: 11.18
+    tags: [video, required]
+    profiles: [local-12gb]
+
+  - name: wan22-remix-i2v-low-gguf-q6k
+    desc: Wan 2.2 Remix v3 I2V low-noise (GGUF Q6_K for 12GB cards)
+    source: civitai
+    model_id: 2472759
+    version_id: 2780751
+    file: wan22RemixI2VGGUFV30_lowQ6K.gguf
+    dest: models/diffusion_models
+    sha256: B07A9A58314E9E2DB2604A21652D2F7C55D59A99BCD623D3E1DA38E24BCED21C
+    size_gb: 11.18
+    tags: [video, required]
+    profiles: [local-12gb]
+
+  - name: wan22-i2v-high-fp8-stock
+    desc: Wan 2.2 14B I2V high-noise fp8_scaled (stock baseline)
+    source: huggingface
+    repo: Comfy-Org/Wan_2.2_ComfyUI_Repackaged
+    file: split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors
+    dest: models/diffusion_models
+    size_gb: 14.29
+    tags: [video, required]
+    profiles: [local-24gb, cloud]
+
+  - name: wan22-i2v-low-fp8-stock
+    desc: Wan 2.2 14B I2V low-noise fp8_scaled (stock baseline)
+    source: huggingface
+    repo: Comfy-Org/Wan_2.2_ComfyUI_Repackaged
+    file: split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors
+    dest: models/diffusion_models
+    size_gb: 14.29
+    tags: [video, required]
+    profiles: [local-24gb, cloud]
+
+  - name: wan22-i2v-high-fp16-stock
+    desc: Wan 2.2 14B I2V high-noise fp16 (80GB-pod quality tier)
+    source: huggingface
+    repo: Comfy-Org/Wan_2.2_ComfyUI_Repackaged
+    file: split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp16.safetensors
+    dest: models/diffusion_models
+    size_gb: 28.58
+    tags: [video, optional]
+    profiles: [cloud-80gb]
+
+  - name: wan22-i2v-low-fp16-stock
+    desc: Wan 2.2 14B I2V low-noise fp16 (80GB-pod quality tier)
+    source: huggingface
+    repo: Comfy-Org/Wan_2.2_ComfyUI_Repackaged
+    file: split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp16.safetensors
+    dest: models/diffusion_models
+    size_gb: 28.58
+    tags: [video, optional]
+    profiles: [cloud-80gb]
+
+  # PalinGenesis I2V finetune: listed in the plan as an alternate, but no checkpoint
+  # (only workflow zips) could be resolved via the Civitai API at build time.
+  # Add it with `provision.py add-lora <url>`-style manual entry once a real
+  # checkpoint page exists.
+
+  - name: umt5-xxl-fp8-encoder
+    desc: UMT5-XXL text encoder fp8_scaled (all Wan workflows)
+    source: huggingface
+    repo: Comfy-Org/Wan_2.2_ComfyUI_Repackaged
+    file: split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors
+    dest: models/text_encoders
+    size_gb: 6.74
+    tags: [video, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: wan21-vae
+    desc: Wan 2.1 VAE (used by all 14B Wan 2.2 models)
+    source: huggingface
+    repo: Comfy-Org/Wan_2.2_ComfyUI_Repackaged
+    file: split_files/vae/wan_2.1_vae.safetensors
+    dest: models/vae
+    size_gb: 0.25
+    tags: [video, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: wan22-vae-5b
+    desc: Wan 2.2 VAE (only needed by 5B models; small, kept for compatibility)
+    source: huggingface
+    repo: Comfy-Org/Wan_2.2_ComfyUI_Repackaged
+    file: split_files/vae/wan2.2_vae.safetensors
+    dest: models/vae
+    size_gb: 1.41
+    tags: [video, optional]
+    profiles: [local-24gb, cloud, cloud-80gb]
+
+  - name: wan22-lightx2v-i2v-lora-high
+    desc: Lightx2v 4-step Lightning LoRA, I2V high-noise
+    source: huggingface
+    repo: Comfy-Org/Wan_2.2_ComfyUI_Repackaged
+    file: split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors
+    dest: models/loras
+    size_gb: 1.23
+    tags: [video, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: wan22-lightx2v-i2v-lora-low
+    desc: Lightx2v 4-step Lightning LoRA, I2V low-noise
+    source: huggingface
+    repo: Comfy-Org/Wan_2.2_ComfyUI_Repackaged
+    file: split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors
+    dest: models/loras
+    size_gb: 1.23
+    tags: [video, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  # RIFE frame-interpolation weights are downloaded automatically by
+  # ComfyUI-Frame-Interpolation on first use (node-managed, nothing to declare).
+
+  # ────────────────────────── IMAGE STACK ──────────────────────────
+
+  - name: chroma1-hd
+    desc: Chroma1-HD (Flux-arch, uncensored, best realism) — needs Flux VAE + T5
+    source: huggingface
+    repo: lodestones/Chroma1-HD
+    file: Chroma1-HD.safetensors
+    dest: models/diffusion_models
+    size_gb: 17.8
+    tags: [image, required]
+    profiles: [local-24gb, cloud, cloud-80gb]   # too heavy for 12GB; SDXL covers images there
+
+  - name: flux-vae
+    desc: Flux VAE (ae.safetensors) for Chroma — gated repo, needs free HF account/token
+    source: huggingface
+    repo: black-forest-labs/FLUX.1-schnell
+    file: ae.safetensors
+    dest: models/vae
+    gated: true
+    size_gb: 0.34
+    tags: [image, required]
+    profiles: [local-24gb, cloud, cloud-80gb]
+
+  - name: t5xxl-fp8-encoder
+    desc: T5-XXL fp8 text encoder for Chroma
+    source: huggingface
+    repo: comfyanonymous/flux_text_encoders
+    file: t5xxl_fp8_e4m3fn_scaled.safetensors
+    dest: models/text_encoders
+    size_gb: 5.16
+    tags: [image, required]
+    profiles: [local-24gb, cloud, cloud-80gb]
+
+  - name: realvisxl-v5
+    desc: RealVisXL V5.0 fp16 BakedVAE (top SDXL photoreal, default image checkpoint)
+    source: civitai
+    model_id: 139562
+    version_id: 789646
+    file: realvisxlV50_v50Bakedvae.safetensors
+    dest: models/checkpoints
+    sha256: 6A35A7855770AE9820A3C931D4964C3817B6D9E3C6F9C4DABB5B3A94E5643B80
+    size_gb: 6.46
+    tags: [image, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: juggernaut-xl-ragnarok
+    desc: Juggernaut XL Ragnarok (photoreal alternate)
+    source: civitai
+    model_id: 133005
+    version_id: 1759168
+    file: juggernautXL_ragnarok.safetensors
+    dest: models/checkpoints
+    sha256: DD08FA32F98D05A2443CA1419E46DF1575A0811F6E3B246D9DD47FF20F5EB66A
+    size_gb: 6.62
+    tags: [image, optional]
+    profiles: [local-24gb, cloud, cloud-80gb]
+
+  - name: lustify-zenith-v9
+    desc: LUSTIFY ZENITH V9 (SDXL, explicit-capable photoreal)
+    source: civitai
+    model_id: 573152
+    version_id: 3045803
+    file: lustifySDXLNSFW_zenithV9.safetensors
+    dest: models/checkpoints
+    sha256: 1A3ABF0BF48113EB5E17D2F8AE012C5B60CB97D81D79C4D9E47CD5AF56C162F1
+    size_gb: 6.46
+    tags: [image, optional]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: pony-diffusion-v6-xl
+    desc: Pony Diffusion V6 XL (stylized, huge LoRA ecosystem) — optional
+    source: civitai
+    model_id: 257749
+    version_id: 290640
+    file: ponyDiffusionV6XL_v6StartWithThisOne.safetensors
+    dest: models/checkpoints
+    sha256: 67AB2FD8EC439A89B3FEDB15CC65F54336AF163C7EB5E4F2ACC98F090A29B0B3
+    size_gb: 6.46
+    tags: [image, optional]
+    profiles: [local-24gb, cloud, cloud-80gb]
+
+  - name: ipadapter-plus-sdxl
+    desc: IP-Adapter Plus SDXL (reference subject/style transfer)
+    source: huggingface
+    repo: h94/IP-Adapter
+    file: sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors
+    dest: models/ipadapter
+    size_gb: 0.85
+    tags: [image, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: ipadapter-plus-face-sdxl
+    desc: IP-Adapter Plus Face SDXL (face-focused reference transfer)
+    source: huggingface
+    repo: h94/IP-Adapter
+    file: sdxl_models/ip-adapter-plus-face_sdxl_vit-h.safetensors
+    dest: models/ipadapter
+    size_gb: 0.85
+    tags: [image, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: ipadapter-faceid-plusv2-sdxl
+    desc: IP-Adapter FaceID Plus v2 SDXL (fictional-character consistency)
+    source: huggingface
+    repo: h94/IP-Adapter-FaceID
+    file: ip-adapter-faceid-plusv2_sdxl.bin
+    dest: models/ipadapter
+    size_gb: 1.49
+    tags: [image, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: ipadapter-faceid-plusv2-sdxl-lora
+    desc: Companion LoRA for FaceID Plus v2 SDXL
+    source: huggingface
+    repo: h94/IP-Adapter-FaceID
+    file: ip-adapter-faceid-plusv2_sdxl_lora.safetensors
+    dest: models/loras
+    size_gb: 0.37
+    tags: [image, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: clip-vision-vit-h
+    desc: CLIP-Vision ViT-H image encoder (required by IP-Adapter)
+    source: huggingface
+    repo: h94/IP-Adapter
+    file: models/image_encoder/model.safetensors
+    rename: CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors
+    dest: models/clip_vision
+    size_gb: 2.53
+    tags: [image, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: controlnet-union-sdxl
+    desc: ControlNet Union SDXL ProMax (pose/depth/edge, one model for all modes)
+    source: huggingface
+    repo: xinsir/controlnet-union-sdxl-1.0
+    file: diffusion_pytorch_model_promax.safetensors
+    rename: controlnet-union-sdxl-promax.safetensors
+    dest: models/controlnet
+    size_gb: 2.51
+    tags: [image, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: 4x-ultrasharp
+    desc: 4x-UltraSharp upscaler (final image + video upscale passes)
+    source: civitai
+    model_id: 116225
+    version_id: 125843
+    file: 4xUltrasharp_4xUltrasharpV10.pt
+    dest: models/upscale_models
+    sha256: A5812231FC936B42AF08A5EDBA784195495D303D5B3248C24489EF0C4021FE01
+    size_gb: 0.07
+    tags: [image, video, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  # ─────────────── USER-CURATED LoRAs (managed by `add-lora`) ───────────────
+  # Entries below are appended by `provision.py add-lora <civitai-url>`.
+  # POLICY (enforced in code): no LoRAs of real identifiable people, nothing
+  # involving minors. add-lora rejects Civitai entries flagged as real-person.
+user_loras: []

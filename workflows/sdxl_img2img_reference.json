@@ -1,0 +1,1188 @@
+{
+ "last_node_id": 21,
+ "last_link_id": 31,
+ "nodes": [
+  {
+   "id": 1,
+   "type": "Note",
+   "pos": [
+    -80,
+    -380
+   ],
+   "size": [
+    500,
+    320
+   ],
+   "flags": {},
+   "order": 0,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "properties": {},
+   "title": "README \u2014 the denoise dial",
+   "color": "#432",
+   "bgcolor": "#653",
+   "widgets_values": [
+    "SDXL REFERENCE IMG2IMG \u2014 the workhorse image workflow.\n\nLoad a reference image; the IP-Adapter carries its subject/style into the result, and the KSampler's DENOISE dial decides how far to stray from it:\n   0.30  subtle variation (same scene, cleaned up)\n   0.55  balanced re-imagining  (DEFAULT)\n   0.75  heavy re-imagining (keeps subject, new scene)\n\nCHECKPOINT: RealVisXL by default \u2014 switch to Juggernaut or LUSTIFY in the loader. LORA: the LoRA node is bypassed; pick a file and un-bypass to use (default weight 0.7).\n\nCONTROLNET (bypassed by default): un-bypass the 3 green nodes to force the pose/depth/edges of the reference. Pick the mode in AIO preprocessor + SetUnionControlNetType (openpose / depth / canny).\n\nIP-ADAPTER weight 0.7: raise toward 0.8 to cling to the reference, lower toward 0.6 to give the prompt more say."
+   ]
+  },
+  {
+   "id": 2,
+   "type": "LoadImage",
+   "pos": [
+    -80,
+    0
+   ],
+   "size": [
+    340,
+    320
+   ],
+   "flags": {},
+   "order": 1,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      6,
+      9,
+      15
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "MASK",
+     "type": "MASK",
+     "links": [],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage"
+   },
+   "widgets_values": [
+    "reference.png",
+    "image"
+   ],
+   "title": "Reference image"
+  },
+  {
+   "id": 3,
+   "type": "CheckpointLoaderSimple",
+   "pos": [
+    -80,
+    380
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 2,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      1
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "CLIP",
+     "type": "CLIP",
+     "links": [
+      2
+     ],
+     "slot_index": 1
+    },
+    {
+     "name": "VAE",
+     "type": "VAE",
+     "links": [
+      17,
+      28
+     ],
+     "slot_index": 2
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "CheckpointLoaderSimple"
+   },
+   "widgets_values": [
+    "realvisxlV50_v50Bakedvae.safetensors"
+   ],
+   "title": "Checkpoint (RealVisXL / Juggernaut / LUSTIFY)"
+  },
+  {
+   "id": 4,
+   "type": "LoraLoader",
+   "pos": [
+    300,
+    380
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 3,
+   "mode": 4,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 1
+    },
+    {
+     "name": "clip",
+     "type": "CLIP",
+     "link": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      3
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "CLIP",
+     "type": "CLIP",
+     "links": [
+      7,
+      8
+     ],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoraLoader"
+   },
+   "widgets_values": [
+    "ip-adapter-faceid-plusv2_sdxl_lora.safetensors",
+    0.7,
+    0.7
+   ],
+   "title": "LoRA stack (bypassed - pick a file + enable)"
+  },
+  {
+   "id": 5,
+   "type": "IPAdapterUnifiedLoader",
+   "pos": [
+    680,
+    380
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 4,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 3
+    },
+    {
+     "name": "ipadapter",
+     "type": "IPADAPTER",
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "links": [
+      4
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "ipadapter",
+     "type": "IPADAPTER",
+     "links": [
+      5
+     ],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "IPAdapterUnifiedLoader"
+   },
+   "widgets_values": [
+    "PLUS (high strength)"
+   ],
+   "title": "IP-Adapter loader"
+  },
+  {
+   "id": 6,
+   "type": "IPAdapter",
+   "pos": [
+    1060,
+    380
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 5,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 4
+    },
+    {
+     "name": "ipadapter",
+     "type": "IPADAPTER",
+     "link": 5
+    },
+    {
+     "name": "image",
+     "type": "IMAGE",
+     "link": 6
+    },
+    {
+     "name": "attn_mask",
+     "type": "MASK",
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      18,
+      24
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "IPAdapter"
+   },
+   "widgets_values": [
+    0.7,
+    0.0,
+    1.0,
+    "standard"
+   ],
+   "title": "IP-Adapter (reference transfer, weight 0.6-0.8)"
+  },
+  {
+   "id": 7,
+   "type": "CLIPTextEncode",
+   "pos": [
+    300,
+    620
+   ],
+   "size": [
+    400,
+    150
+   ],
+   "flags": {},
+   "order": 6,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "clip",
+     "type": "CLIP",
+     "link": 7
+    }
+   ],
+   "outputs": [
+    {
+     "name": "CONDITIONING",
+     "type": "CONDITIONING",
+     "links": [
+      11
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "CLIPTextEncode"
+   },
+   "widgets_values": [
+    "photograph, natural skin texture, detailed, soft window light"
+   ],
+   "title": "Positive prompt (what to change / keep)"
+  },
+  {
+   "id": 8,
+   "type": "CLIPTextEncode",
+   "pos": [
+    300,
+    820
+   ],
+   "size": [
+    400,
+    110
+   ],
+   "flags": {},
+   "order": 7,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "clip",
+     "type": "CLIP",
+     "link": 8
+    }
+   ],
+   "outputs": [
+    {
+     "name": "CONDITIONING",
+     "type": "CONDITIONING",
+     "links": [
+      12
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "CLIPTextEncode"
+   },
+   "widgets_values": [
+    "blurry, low quality, watermark, text, deformed, bad anatomy, extra fingers, jpeg artifacts"
+   ],
+   "title": "Negative prompt"
+  },
+  {
+   "id": 9,
+   "type": "AIO_Preprocessor",
+   "pos": [
+    740,
+    620
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 8,
+   "mode": 4,
+   "inputs": [
+    {
+     "name": "image",
+     "type": "IMAGE",
+     "link": 9
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      14
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "AIO_Preprocessor"
+   },
+   "widgets_values": [
+    "OpenposePreprocessor",
+    1024
+   ],
+   "title": "ControlNet preprocessor (bypassed)"
+  },
+  {
+   "id": 10,
+   "type": "ControlNetLoader",
+   "pos": [
+    740,
+    800
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 9,
+   "mode": 4,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "CONTROL_NET",
+     "type": "CONTROL_NET",
+     "links": [
+      10
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "ControlNetLoader"
+   },
+   "widgets_values": [
+    "controlnet-union-sdxl-promax.safetensors"
+   ],
+   "title": "ControlNet Union (bypassed)"
+  },
+  {
+   "id": 11,
+   "type": "SetUnionControlNetType",
+   "pos": [
+    740,
+    920
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 10,
+   "mode": 4,
+   "inputs": [
+    {
+     "name": "control_net",
+     "type": "CONTROL_NET",
+     "link": 10
+    }
+   ],
+   "outputs": [
+    {
+     "name": "CONTROL_NET",
+     "type": "CONTROL_NET",
+     "links": [
+      13
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "SetUnionControlNetType"
+   },
+   "widgets_values": [
+    "openpose"
+   ],
+   "title": "Union mode (bypassed)"
+  },
+  {
+   "id": 12,
+   "type": "ControlNetApplyAdvanced",
+   "pos": [
+    1120,
+    700
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 11,
+   "mode": 4,
+   "inputs": [
+    {
+     "name": "positive",
+     "type": "CONDITIONING",
+     "link": 11
+    },
+    {
+     "name": "negative",
+     "type": "CONDITIONING",
+     "link": 12
+    },
+    {
+     "name": "control_net",
+     "type": "CONTROL_NET",
+     "link": 13
+    },
+    {
+     "name": "image",
+     "type": "IMAGE",
+     "link": 14
+    }
+   ],
+   "outputs": [
+    {
+     "name": "positive",
+     "type": "CONDITIONING",
+     "links": [
+      19,
+      25
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "negative",
+     "type": "CONDITIONING",
+     "links": [
+      20,
+      26
+     ],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "ControlNetApplyAdvanced"
+   },
+   "widgets_values": [
+    0.7,
+    0.0,
+    0.8
+   ],
+   "title": "Apply ControlNet (bypassed)"
+  },
+  {
+   "id": 13,
+   "type": "ImageScaleToTotalPixels",
+   "pos": [
+    300,
+    60
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 12,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "image",
+     "type": "IMAGE",
+     "link": 15
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      16
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "ImageScaleToTotalPixels"
+   },
+   "widgets_values": [
+    "lanczos",
+    1.0
+   ],
+   "title": "Fit reference to SDXL size"
+  },
+  {
+   "id": 14,
+   "type": "VAEEncode",
+   "pos": [
+    680,
+    60
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 13,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "pixels",
+     "type": "IMAGE",
+     "link": 16
+    },
+    {
+     "name": "vae",
+     "type": "VAE",
+     "link": 17
+    }
+   ],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      21
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAEEncode"
+   },
+   "title": "Reference -> latent"
+  },
+  {
+   "id": 15,
+   "type": "KSampler",
+   "pos": [
+    1500,
+    380
+   ],
+   "size": [
+    320,
+    280
+   ],
+   "flags": {},
+   "order": 14,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 18
+    },
+    {
+     "name": "positive",
+     "type": "CONDITIONING",
+     "link": 19
+    },
+    {
+     "name": "negative",
+     "type": "CONDITIONING",
+     "link": 20
+    },
+    {
+     "name": "latent_image",
+     "type": "LATENT",
+     "link": 21
+    }
+   ],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      22
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "KSampler"
+   },
+   "widgets_values": [
+    1234567890,
+    "randomize",
+    30,
+    5.5,
+    "dpmpp_2m",
+    "karras",
+    0.55
+   ],
+   "title": "Main sampler \u2014 DENOISE IS THE DIAL"
+  },
+  {
+   "id": 16,
+   "type": "LatentUpscaleBy",
+   "pos": [
+    1500,
+    720
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 15,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "link": 22
+    }
+   ],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      23
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LatentUpscaleBy"
+   },
+   "widgets_values": [
+    "nearest-exact",
+    1.5
+   ],
+   "title": "Hires 1.5x"
+  },
+  {
+   "id": 17,
+   "type": "KSampler",
+   "pos": [
+    1860,
+    380
+   ],
+   "size": [
+    320,
+    280
+   ],
+   "flags": {},
+   "order": 16,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 24
+    },
+    {
+     "name": "positive",
+     "type": "CONDITIONING",
+     "link": 25
+    },
+    {
+     "name": "negative",
+     "type": "CONDITIONING",
+     "link": 26
+    },
+    {
+     "name": "latent_image",
+     "type": "LATENT",
+     "link": 23
+    }
+   ],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      27
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "KSampler"
+   },
+   "widgets_values": [
+    1234567890,
+    "fixed",
+    24,
+    5.0,
+    "dpmpp_2m",
+    "karras",
+    0.45
+   ],
+   "title": "Hires pass (denoise <= 0.5)"
+  },
+  {
+   "id": 18,
+   "type": "VAEDecode",
+   "pos": [
+    2220,
+    380
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 17,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "link": 27
+    },
+    {
+     "name": "vae",
+     "type": "VAE",
+     "link": 28
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      29
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAEDecode"
+   }
+  },
+  {
+   "id": 19,
+   "type": "UpscaleModelLoader",
+   "pos": [
+    2220,
+    520
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 18,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "UPSCALE_MODEL",
+     "type": "UPSCALE_MODEL",
+     "links": [
+      30
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "UpscaleModelLoader"
+   },
+   "widgets_values": [
+    "4xUltrasharp_4xUltrasharpV10.pt"
+   ]
+  },
+  {
+   "id": 20,
+   "type": "ImageUpscaleWithModel",
+   "pos": [
+    2220,
+    640
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 19,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "upscale_model",
+     "type": "UPSCALE_MODEL",
+     "link": 30
+    },
+    {
+     "name": "image",
+     "type": "IMAGE",
+     "link": 29
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      31
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "ImageUpscaleWithModel"
+   },
+   "title": "4x upscale"
+  },
+  {
+   "id": 21,
+   "type": "SaveImage",
+   "pos": [
+    2580,
+    380
+   ],
+   "size": [
+    360,
+    400
+   ],
+   "flags": {},
+   "order": 20,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "images",
+     "type": "IMAGE",
+     "link": 31
+    }
+   ],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "SaveImage"
+   },
+   "widgets_values": [
+    "sdxl_reference"
+   ]
+  }
+ ],
+ "links": [
+  [
+   1,
+   3,
+   0,
+   4,
+   0,
+   "MODEL"
+  ],
+  [
+   2,
+   3,
+   1,
+   4,
+   1,
+   "CLIP"
+  ],
+  [
+   3,
+   4,
+   0,
+   5,
+   0,
+   "MODEL"
+  ],
+  [
+   4,
+   5,
+   0,
+   6,
+   0,
+   "MODEL"
+  ],
+  [
+   5,
+   5,
+   1,
+   6,
+   1,
+   "IPADAPTER"
+  ],
+  [
+   6,
+   2,
+   0,
+   6,
+   2,
+   "IMAGE"
+  ],
+  [
+   7,
+   4,
+   1,
+   7,
+   0,
+   "CLIP"
+  ],
+  [
+   8,
+   4,
+   1,
+   8,
+   0,
+   "CLIP"
+  ],
+  [
+   9,
+   2,
+   0,
+   9,
+   0,
+   "IMAGE"
+  ],
+  [
+   10,
+   10,
+   0,
+   11,
+   0,
+   "CONTROL_NET"
+  ],
+  [
+   11,
+   7,
+   0,
+   12,
+   0,
+   "CONDITIONING"
+  ],
+  [
+   12,
+   8,
+   0,
+   12,
+   1,
+   "CONDITIONING"
+  ],
+  [
+   13,
+   11,
+   0,
+   12,
+   2,
+   "CONTROL_NET"
+  ],
+  [
+   14,
+   9,
+   0,
+   12,
+   3,
+   "IMAGE"
+  ],
+  [
+   15,
+   2,
+   0,
+   13,
+   0,
+   "IMAGE"
+  ],
+  [
+   16,
+   13,
+   0,
+   14,
+   0,
+   "IMAGE"
+  ],
+  [
+   17,
+   3,
+   2,
+   14,
+   1,
+   "VAE"
+  ],
+  [
+   18,
+   6,
+   0,
+   15,
+   0,
+   "MODEL"
+  ],
+  [
+   19,
+   12,
+   0,
+   15,
+   1,
+   "CONDITIONING"
+  ],
+  [
+   20,
+   12,
+   1,
+   15,
+   2,
+   "CONDITIONING"
+  ],
+  [
+   21,
+   14,
+   0,
+   15,
+   3,
+   "LATENT"
+  ],
+  [
+   22,
+   15,
+   0,
+   16,
+   0,
+   "LATENT"
+  ],
+  [
+   23,
+   16,
+   0,
+   17,
+   3,
+   "LATENT"
+  ],
+  [
+   24,
+   6,
+   0,
+   17,
+   0,
+   "MODEL"
+  ],
+  [
+   25,
+   12,
+   0,
+   17,
+   1,
+   "CONDITIONING"
+  ],
+  [
+   26,
+   12,
+   1,
+   17,
+   2,
+   "CONDITIONING"
+  ],
+  [
+   27,
+   17,
+   0,
+   18,
+   0,
+   "LATENT"
+  ],
+  [
+   28,
+   3,
+   2,
+   18,
+   1,
+   "VAE"
+  ],
+  [
+   29,
+   18,
+   0,
+   20,
+   1,
+   "IMAGE"
+  ],
+  [
+   30,
+   19,
+   0,
+   20,
+   0,
+   "UPSCALE_MODEL"
+  ],
+  [
+   31,
+   20,
+   0,
+   21,
+   0,
+   "IMAGE"
+  ]
+ ],
+ "groups": [],
+ "config": {},
+ "extra": {
+  "ds": {
+   "scale": 0.8,
+   "offset": [
+    0,
+    0
+   ]
+  }
+ },
+ "version": 0.4
+}
