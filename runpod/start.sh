@@ -10,6 +10,9 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMFY="$WORKSPACE/ComfyUI"
 export COMFY_DIR="$COMFY"
 export HF_HOME="$WORKSPACE/.hf_cache"
+# Never trust a venv left on the volume by a previous pod — always use this
+# pod's system python (the runpod/pytorch images ship torch in it).
+export COMFY_FORCE_SYSTEM_PYTHON=1
 
 mkdir -p "$WORKSPACE"
 cd "$REPO_DIR"
@@ -67,8 +70,7 @@ fi
 #    points at the previous pod's interpreter) — make sure ComfyUI's own deps
 #    exist in whatever python we're about to launch with.
 cd "$COMFY"
-PYBIN="$COMFY/venv/bin/python"
-[ -x "$PYBIN" ] || PYBIN="python3"
+PYBIN="python3"
 echo "[start.sh] Ensuring ComfyUI requirements in $PYBIN..."
 "$PYBIN" -m pip install -q -r "$COMFY/requirements.txt" || true
 echo "[start.sh] Starting ComfyUI on :8188"
