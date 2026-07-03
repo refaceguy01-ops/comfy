@@ -206,18 +206,6 @@ models:
     tags: [image, required]
     profiles: [local-24gb, cloud, cloud-80gb]
 
-  - name: realvisxl-v5
-    desc: RealVisXL V5.0 fp16 BakedVAE (top SDXL photoreal, default image checkpoint)
-    source: civitai
-    model_id: 139562
-    version_id: 789646
-    file: realvisxlV50_v50Bakedvae.safetensors
-    dest: models/checkpoints
-    sha256: 6A35A7855770AE9820A3C931D4964C3817B6D9E3C6F9C4DABB5B3A94E5643B80
-    size_gb: 6.46
-    tags: [image, required]
-    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
-
   - name: juggernaut-xl-ragnarok
     desc: Juggernaut XL Ragnarok (photoreal alternate)
     source: civitai
@@ -230,16 +218,16 @@ models:
     tags: [image, optional]
     profiles: [local-24gb, cloud, cloud-80gb]
 
-  - name: lustify-zenith-v9
-    desc: LUSTIFY ZENITH V9 (SDXL, explicit-capable photoreal)
+  - name: lustify-olt
+    desc: LUSTIFY OLT Fixed Textures (SDXL, explicit-capable photoreal, default image checkpoint)
     source: civitai
     model_id: 573152
-    version_id: 3045803
-    file: lustifySDXLNSFW_zenithV9.safetensors
+    version_id: 1569593
+    file: lustifySDXLNSFW_oltFIXEDTEXTURES.safetensors
     dest: models/checkpoints
-    sha256: 1A3ABF0BF48113EB5E17D2F8AE012C5B60CB97D81D79C4D9E47CD5AF56C162F1
+    sha256: D7E7E35B0F60C42AD427CE81E30569A3881143ECF2F9CB50021A52947F69D22F
     size_gb: 6.46
-    tags: [image, optional]
+    tags: [image, required]
     profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
 
   - name: pony-diffusion-v6-xl

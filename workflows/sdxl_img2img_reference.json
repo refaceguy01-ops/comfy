@@ -23,7 +23,7 @@
    "color": "#432",
    "bgcolor": "#653",
    "widgets_values": [
-    "SDXL REFERENCE IMG2IMG \u2014 the workhorse image workflow.\n\nLoad a reference image; the IP-Adapter carries its subject/style into the result, and the KSampler's DENOISE dial decides how far to stray from it:\n   0.30  subtle variation (same scene, cleaned up)\n   0.55  balanced re-imagining  (DEFAULT)\n   0.75  heavy re-imagining (keeps subject, new scene)\n\nCHECKPOINT: RealVisXL by default \u2014 switch to Juggernaut or LUSTIFY in the loader. LORA: the LoRA node is bypassed; pick a file and un-bypass to use (default weight 0.7).\n\nCONTROLNET (bypassed by default): un-bypass the 3 green nodes to force the pose/depth/edges of the reference. Pick the mode in AIO preprocessor + SetUnionControlNetType (openpose / depth / canny).\n\nIP-ADAPTER weight 0.7: raise toward 0.8 to cling to the reference, lower toward 0.6 to give the prompt more say."
+    "SDXL REFERENCE IMG2IMG \u2014 the workhorse image workflow.\n\nLoad a reference image; the IP-Adapter carries its subject/style into the result, and the KSampler's DENOISE dial decides how far to stray from it:\n   0.30  subtle variation (same scene, cleaned up)\n   0.55  balanced re-imagining  (DEFAULT)\n   0.75  heavy re-imagining (keeps subject, new scene)\n\nCHECKPOINT: LUSTIFY by default \u2014 switch it in the loader if you add other checkpoints. LORA: the LoRA node is bypassed; pick your file and un-bypass to use (default weight 0.7).\n\nCONTROLNET (bypassed by default): un-bypass the 3 green nodes to force the pose/depth/edges of the reference. Pick the mode in AIO preprocessor + SetUnionControlNetType (openpose / depth / canny).\n\nIP-ADAPTER weight 0.7: raise toward 0.8 to cling to the reference, lower toward 0.6 to give the prompt more say."
    ]
   },
   {
@@ -114,9 +114,9 @@
     "Node name for S&R": "CheckpointLoaderSimple"
    },
    "widgets_values": [
-    "realvisxlV50_v50Bakedvae.safetensors"
+    "lustifySDXLNSFW_oltFIXEDTEXTURES.safetensors"
    ],
-   "title": "Checkpoint (RealVisXL / Juggernaut / LUSTIFY)"
+   "title": "Checkpoint (LUSTIFY default)"
   },
   {
    "id": 4,

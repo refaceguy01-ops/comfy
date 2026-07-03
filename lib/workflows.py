@@ -341,9 +341,9 @@ def sdxl_img2img_reference(manifest: Manifest) -> dict:
         "   0.30  subtle variation (same scene, cleaned up)\n"
         "   0.55  balanced re-imagining  (DEFAULT)\n"
         "   0.75  heavy re-imagining (keeps subject, new scene)\n\n"
-        "CHECKPOINT: RealVisXL by default — switch to Juggernaut or LUSTIFY in the "
-        "loader. LORA: the LoRA node is bypassed; pick a file and un-bypass to use "
-        "(default weight 0.7).\n\n"
+        "CHECKPOINT: LUSTIFY by default — switch it in the loader if you add other "
+        "checkpoints. LORA: the LoRA node is bypassed; pick your file and un-bypass "
+        "to use (default weight 0.7).\n\n"
         "CONTROLNET (bypassed by default): un-bypass the 3 green nodes to force the "
         "pose/depth/edges of the reference. Pick the mode in AIO preprocessor + "
         "SetUnionControlNetType (openpose / depth / canny).\n\n"
@@ -353,8 +353,8 @@ def sdxl_img2img_reference(manifest: Manifest) -> dict:
     ref = g.add("LoadImage", (-80, 0), widgets=["reference.png", "image"],
                 title="Reference image", size=(340, 320))
     ckpt = g.add("CheckpointLoaderSimple", (-80, 380),
-                 widgets=[f.get("realvisxl-v5", "realvisxlV50_v50Bakedvae.safetensors")],
-                 title="Checkpoint (RealVisXL / Juggernaut / LUSTIFY)")
+                 widgets=[f.get("lustify-olt", "lustifySDXLNSFW_oltFIXEDTEXTURES.safetensors")],
+                 title="Checkpoint (LUSTIFY default)")
     lora = g.add("LoraLoader", (300, 380), mode=BYPASS,
                  widgets=[f.get("ipadapter-faceid-plusv2-sdxl-lora",
                                 "ip-adapter-faceid-plusv2_sdxl_lora.safetensors"), 0.7, 0.7],
@@ -457,7 +457,7 @@ def sdxl_faceid_character(manifest: Manifest) -> dict:
     body = g.add("LoadImage", (-80, 340), widgets=["body_reference.png", "image"],
                  title="BODY / STYLE reference", size=(300, 300))
     ckpt = g.add("CheckpointLoaderSimple", (-80, 700),
-                 widgets=[f.get("realvisxl-v5", "realvisxlV50_v50Bakedvae.safetensors")],
+                 widgets=[f.get("lustify-olt", "lustifySDXLNSFW_oltFIXEDTEXTURES.safetensors")],
                  title="Checkpoint")
 
     fidl = g.add("IPAdapterUnifiedLoaderFaceID", (300, 700),

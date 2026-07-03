@@ -154,7 +154,7 @@
     "Node name for S&R": "CheckpointLoaderSimple"
    },
    "widgets_values": [
-    "realvisxlV50_v50Bakedvae.safetensors"
+    "lustifySDXLNSFW_oltFIXEDTEXTURES.safetensors"
    ],
    "title": "Checkpoint"
   },
