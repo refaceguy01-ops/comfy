@@ -72,6 +72,10 @@ fi
 cd "$COMFY"
 PYBIN="python3"
 echo "[start.sh] Ensuring ComfyUI requirements in $PYBIN..."
-"$PYBIN" -m pip install -q -r "$COMFY/requirements.txt" || true
+"$PYBIN" -m pip install -r "$COMFY/requirements.txt" || true
+# the web UI ships as separate packages — make sure they really landed
+# (a quiet earlier failure here served 404s with a healthy API)
+"$PYBIN" -m pip install --upgrade comfyui-frontend-package \
+    comfyui-workflow-templates comfyui-embedded-docs || true
 echo "[start.sh] Starting ComfyUI on :8188"
 exec "$PYBIN" main.py --listen 0.0.0.0 --port 8188
