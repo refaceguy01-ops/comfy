@@ -1,0 +1,710 @@
+{
+ "last_node_id": 13,
+ "last_link_id": 18,
+ "nodes": [
+  {
+   "id": 1,
+   "type": "Note",
+   "pos": [
+    -80,
+    -360
+   ],
+   "size": [
+    500,
+    300
+   ],
+   "flags": {},
+   "order": 0,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "properties": {},
+   "title": "README \u2014 LUSTIFY text-to-image",
+   "color": "#432",
+   "bgcolor": "#653",
+   "widgets_values": [
+    "LUSTIFY TEXT-TO-IMAGE \u2014 describe a scene, get a photo. No reference image.\n\nCHECKPOINT: LUSTIFY by default (switch to RealVisXL/Juggernaut in the loader if you add them).\n\nYOUR TRAINED CHARACTER: the purple LoRA node is bypassed. To use a character LoRA you trained (see the 'Train a character LoRA' menu in Setup): pick your .safetensors in the LoRA node, right-click -> Bypass to enable it (weight 0.7-0.9), and PUT ITS TRIGGER WORD in the positive prompt. Without the trigger word the character won't appear.\n\nRESOLUTION: default 832x1216 (portrait). Other SDXL-native sizes: 1024x1024 (square), 1216x832 (landscape), 896x1152, 1152x896. Change them in the Empty Latent node. Off-ratio sizes hurt quality.\n\nLUSTIFY rules (from the model author): CFG 2.5-4.5, steps ~30, DPM++ 2M SDE Karras. Camera tags boost realism ('shot on Canon EOS 5D'). Short, concrete prompts beat long ones. Distant faces warp on any SDXL model."
+   ]
+  },
+  {
+   "id": 2,
+   "type": "CheckpointLoaderSimple",
+   "pos": [
+    -80,
+    0
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 1,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      1
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "CLIP",
+     "type": "CLIP",
+     "links": [
+      2
+     ],
+     "slot_index": 1
+    },
+    {
+     "name": "VAE",
+     "type": "VAE",
+     "links": [
+      15
+     ],
+     "slot_index": 2
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "CheckpointLoaderSimple"
+   },
+   "widgets_values": [
+    "lustifySDXLNSFW_oltFIXEDTEXTURES.safetensors"
+   ],
+   "title": "Checkpoint (LUSTIFY default)"
+  },
+  {
+   "id": 3,
+   "type": "LoraLoader",
+   "pos": [
+    300,
+    0
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 2,
+   "mode": 4,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 1
+    },
+    {
+     "name": "clip",
+     "type": "CLIP",
+     "link": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      5,
+      11
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "CLIP",
+     "type": "CLIP",
+     "links": [
+      3,
+      4
+     ],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoraLoader"
+   },
+   "widgets_values": [
+    "ip-adapter-faceid-plusv2_sdxl_lora.safetensors",
+    0.8,
+    0.8
+   ],
+   "title": "Character LoRA (bypassed - pick your trained file + enable)"
+  },
+  {
+   "id": 4,
+   "type": "CLIPTextEncode",
+   "pos": [
+    700,
+    0
+   ],
+   "size": [
+    400,
+    170
+   ],
+   "flags": {},
+   "order": 3,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "clip",
+     "type": "CLIP",
+     "link": 3
+    }
+   ],
+   "outputs": [
+    {
+     "name": "CONDITIONING",
+     "type": "CONDITIONING",
+     "links": [
+      6,
+      12
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "CLIPTextEncode"
+   },
+   "widgets_values": [
+    "candid amateur photo of a woman on a sunny balcony, shot on Canon EOS 5D, natural light, detailed skin texture with pores, film grain, shallow depth of field, realistic color grading"
+   ],
+   "title": "Positive prompt (put your LoRA trigger word here)"
+  },
+  {
+   "id": 5,
+   "type": "CLIPTextEncode",
+   "pos": [
+    700,
+    220
+   ],
+   "size": [
+    400,
+    120
+   ],
+   "flags": {},
+   "order": 4,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "clip",
+     "type": "CLIP",
+     "link": 4
+    }
+   ],
+   "outputs": [
+    {
+     "name": "CONDITIONING",
+     "type": "CONDITIONING",
+     "links": [
+      7,
+      13
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "CLIPTextEncode"
+   },
+   "widgets_values": [
+    "cgi, 3d render, cartoon, anime, illustration, painting, airbrushed plastic skin, oversaturated, deformed, bad anatomy, extra fingers, watermark, text, blurry, lowres"
+   ],
+   "title": "Negative prompt"
+  },
+  {
+   "id": 6,
+   "type": "EmptyLatentImage",
+   "pos": [
+    700,
+    400
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 5,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      8
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "EmptyLatentImage"
+   },
+   "widgets_values": [
+    832,
+    1216,
+    1
+   ],
+   "title": "Image size (832x1216 portrait)"
+  },
+  {
+   "id": 7,
+   "type": "KSampler",
+   "pos": [
+    1140,
+    0
+   ],
+   "size": [
+    320,
+    280
+   ],
+   "flags": {},
+   "order": 6,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 5
+    },
+    {
+     "name": "positive",
+     "type": "CONDITIONING",
+     "link": 6
+    },
+    {
+     "name": "negative",
+     "type": "CONDITIONING",
+     "link": 7
+    },
+    {
+     "name": "latent_image",
+     "type": "LATENT",
+     "link": 8
+    }
+   ],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      9
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "KSampler"
+   },
+   "widgets_values": [
+    1234567890,
+    "randomize",
+    30,
+    3.5,
+    "dpmpp_2m_sde",
+    "karras",
+    1.0
+   ],
+   "title": "Main sampler"
+  },
+  {
+   "id": 8,
+   "type": "LatentUpscaleBy",
+   "pos": [
+    1140,
+    320
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 7,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "link": 9
+    }
+   ],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      10
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LatentUpscaleBy"
+   },
+   "widgets_values": [
+    "bislerp",
+    1.5
+   ],
+   "title": "Hires 1.5x"
+  },
+  {
+   "id": 9,
+   "type": "KSampler",
+   "pos": [
+    1500,
+    0
+   ],
+   "size": [
+    320,
+    280
+   ],
+   "flags": {},
+   "order": 8,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 11
+    },
+    {
+     "name": "positive",
+     "type": "CONDITIONING",
+     "link": 12
+    },
+    {
+     "name": "negative",
+     "type": "CONDITIONING",
+     "link": 13
+    },
+    {
+     "name": "latent_image",
+     "type": "LATENT",
+     "link": 10
+    }
+   ],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      14
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "KSampler"
+   },
+   "widgets_values": [
+    1234567890,
+    "fixed",
+    24,
+    3.5,
+    "dpmpp_2m_sde",
+    "karras",
+    0.4
+   ],
+   "title": "Hires pass (denoise ~0.4)"
+  },
+  {
+   "id": 10,
+   "type": "VAEDecode",
+   "pos": [
+    1860,
+    0
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 9,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "link": 14
+    },
+    {
+     "name": "vae",
+     "type": "VAE",
+     "link": 15
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      16
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAEDecode"
+   }
+  },
+  {
+   "id": 11,
+   "type": "UpscaleModelLoader",
+   "pos": [
+    1860,
+    140
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 10,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "UPSCALE_MODEL",
+     "type": "UPSCALE_MODEL",
+     "links": [
+      17
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "UpscaleModelLoader"
+   },
+   "widgets_values": [
+    "4xUltrasharp_4xUltrasharpV10.pt"
+   ]
+  },
+  {
+   "id": 12,
+   "type": "ImageUpscaleWithModel",
+   "pos": [
+    1860,
+    260
+   ],
+   "size": [
+    315,
+    120
+   ],
+   "flags": {},
+   "order": 11,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "upscale_model",
+     "type": "UPSCALE_MODEL",
+     "link": 17
+    },
+    {
+     "name": "image",
+     "type": "IMAGE",
+     "link": 16
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      18
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "ImageUpscaleWithModel"
+   },
+   "title": "4x upscale"
+  },
+  {
+   "id": 13,
+   "type": "SaveImage",
+   "pos": [
+    2220,
+    0
+   ],
+   "size": [
+    360,
+    400
+   ],
+   "flags": {},
+   "order": 12,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "images",
+     "type": "IMAGE",
+     "link": 18
+    }
+   ],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "SaveImage"
+   },
+   "widgets_values": [
+    "lustify_txt2img"
+   ]
+  }
+ ],
+ "links": [
+  [
+   1,
+   2,
+   0,
+   3,
+   0,
+   "MODEL"
+  ],
+  [
+   2,
+   2,
+   1,
+   3,
+   1,
+   "CLIP"
+  ],
+  [
+   3,
+   3,
+   1,
+   4,
+   0,
+   "CLIP"
+  ],
+  [
+   4,
+   3,
+   1,
+   5,
+   0,
+   "CLIP"
+  ],
+  [
+   5,
+   3,
+   0,
+   7,
+   0,
+   "MODEL"
+  ],
+  [
+   6,
+   4,
+   0,
+   7,
+   1,
+   "CONDITIONING"
+  ],
+  [
+   7,
+   5,
+   0,
+   7,
+   2,
+   "CONDITIONING"
+  ],
+  [
+   8,
+   6,
+   0,
+   7,
+   3,
+   "LATENT"
+  ],
+  [
+   9,
+   7,
+   0,
+   8,
+   0,
+   "LATENT"
+  ],
+  [
+   10,
+   8,
+   0,
+   9,
+   3,
+   "LATENT"
+  ],
+  [
+   11,
+   3,
+   0,
+   9,
+   0,
+   "MODEL"
+  ],
+  [
+   12,
+   4,
+   0,
+   9,
+   1,
+   "CONDITIONING"
+  ],
+  [
+   13,
+   5,
+   0,
+   9,
+   2,
+   "CONDITIONING"
+  ],
+  [
+   14,
+   9,
+   0,
+   10,
+   0,
+   "LATENT"
+  ],
+  [
+   15,
+   2,
+   2,
+   10,
+   1,
+   "VAE"
+  ],
+  [
+   16,
+   10,
+   0,
+   12,
+   1,
+   "IMAGE"
+  ],
+  [
+   17,
+   11,
+   0,
+   12,
+   0,
+   "UPSCALE_MODEL"
+  ],
+  [
+   18,
+   12,
+   0,
+   13,
+   0,
+   "IMAGE"
+  ]
+ ],
+ "groups": [],
+ "config": {},
+ "extra": {
+  "ds": {
+   "scale": 0.8,
+   "offset": [
+    0,
+    0
+   ]
+  }
+ },
+ "version": 0.4
+}

@@ -47,6 +47,7 @@ NODE_DEFS = {
                                [("LATENT", "LATENT")]),
     "VAEDecode":              ([("samples", "LATENT"), ("vae", "VAE")], [("IMAGE", "IMAGE")]),
     "VAEEncode":              ([("pixels", "IMAGE"), ("vae", "VAE")], [("LATENT", "LATENT")]),
+    "EmptyLatentImage":       ([], [("LATENT", "LATENT")]),
     "LatentUpscaleBy":        ([("samples", "LATENT")], [("LATENT", "LATENT")]),
     "RIFE VFI":               ([("frames", "IMAGE")], [("IMAGE", "IMAGE")]),
     "VHS_VideoCombine":       ([("images", "IMAGE"), ("audio", "AUDIO")],
@@ -585,6 +586,81 @@ def sdxl_faceid_character(manifest: Manifest) -> dict:
     return g.to_json()
 
 
+def sdxl_txt2img_lustify(manifest: Manifest) -> dict:
+    """Pure text-to-image on LUSTIFY, with a LoRA slot for trained characters."""
+    f = _files(manifest)
+    g = Graph()
+    note = g.add("Note", (-80, -360), size=(500, 300), title="README — LUSTIFY text-to-image")
+    note["widgets_values"] = [
+        "LUSTIFY TEXT-TO-IMAGE — describe a scene, get a photo. No reference image.\n\n"
+        "CHECKPOINT: LUSTIFY by default (switch to RealVisXL/Juggernaut in the loader "
+        "if you add them).\n\n"
+        "YOUR TRAINED CHARACTER: the purple LoRA node is bypassed. To use a character "
+        "LoRA you trained (see the 'Train a character LoRA' menu in Setup): pick your "
+        ".safetensors in the LoRA node, right-click -> Bypass to enable it (weight "
+        "0.7-0.9), and PUT ITS TRIGGER WORD in the positive prompt. Without the "
+        "trigger word the character won't appear.\n\n"
+        "RESOLUTION: default 832x1216 (portrait). Other SDXL-native sizes: 1024x1024 "
+        "(square), 1216x832 (landscape), 896x1152, 1152x896. Change them in the Empty "
+        "Latent node. Off-ratio sizes hurt quality.\n\n"
+        "LUSTIFY rules (from the model author): CFG 2.5-4.5, steps ~30, DPM++ 2M SDE "
+        "Karras. Camera tags boost realism ('shot on Canon EOS 5D'). Short, concrete "
+        "prompts beat long ones. Distant faces warp on any SDXL model."]
+
+    ckpt = g.add("CheckpointLoaderSimple", (-80, 0),
+                 widgets=[f.get("lustify-olt", "lustifySDXLNSFW_oltFIXEDTEXTURES.safetensors")],
+                 title="Checkpoint (LUSTIFY default)")
+    lora = g.add("LoraLoader", (300, 0), mode=BYPASS,
+                 widgets=[f.get("ipadapter-faceid-plusv2-sdxl-lora",
+                                "ip-adapter-faceid-plusv2_sdxl_lora.safetensors"), 0.8, 0.8],
+                 title="Character LoRA (bypassed - pick your trained file + enable)")
+
+    pos = g.add("CLIPTextEncode", (700, 0), widgets=[
+        "candid amateur photo of a woman on a sunny balcony, shot on Canon EOS 5D, "
+        "natural light, detailed skin texture with pores, film grain, shallow depth "
+        "of field, realistic color grading"],
+        title="Positive prompt (put your LoRA trigger word here)", size=(400, 170))
+    neg = g.add("CLIPTextEncode", (700, 220), widgets=[NEG_IMAGE],
+                title="Negative prompt", size=(400, 120))
+
+    latent = g.add("EmptyLatentImage", (700, 400), widgets=[832, 1216, 1],
+                   title="Image size (832x1216 portrait)")
+
+    ks = g.add("KSampler", (1140, 0),
+               widgets=[1234567890, "randomize", 30, 3.5, "dpmpp_2m_sde", "karras", 1.0],
+               title="Main sampler", size=(320, 280))
+    up_lat = g.add("LatentUpscaleBy", (1140, 320), widgets=["bislerp", 1.5],
+                   title="Hires 1.5x")
+    ks2 = g.add("KSampler", (1500, 0),
+                widgets=[1234567890, "fixed", 24, 3.5, "dpmpp_2m_sde", "karras", 0.4],
+                title="Hires pass (denoise ~0.4)", size=(320, 280))
+    dec = g.add("VAEDecode", (1860, 0))
+    upm = g.add("UpscaleModelLoader", (1860, 140),
+                widgets=[f.get("4x-ultrasharp", "4xUltrasharp_4xUltrasharpV10.pt")])
+    up = g.add("ImageUpscaleWithModel", (1860, 260), title="4x upscale")
+    save = g.add("SaveImage", (2220, 0), widgets=["lustify_txt2img"], size=(360, 400))
+
+    g.link(ckpt, "MODEL", lora, "model")
+    g.link(ckpt, "CLIP", lora, "clip")
+    g.link(lora, "CLIP", pos, "clip")
+    g.link(lora, "CLIP", neg, "clip")
+    g.link(lora, "MODEL", ks, "model")
+    g.link(pos, "CONDITIONING", ks, "positive")
+    g.link(neg, "CONDITIONING", ks, "negative")
+    g.link(latent, "LATENT", ks, "latent_image")
+    g.link(ks, "LATENT", up_lat, "samples")
+    g.link(up_lat, "LATENT", ks2, "latent_image")
+    g.link(lora, "MODEL", ks2, "model")
+    g.link(pos, "CONDITIONING", ks2, "positive")
+    g.link(neg, "CONDITIONING", ks2, "negative")
+    g.link(ks2, "LATENT", dec, "samples")
+    g.link(ckpt, "VAE", dec, "vae")
+    g.link(dec, "IMAGE", up, "image")
+    g.link(upm, "UPSCALE_MODEL", up, "upscale_model")
+    g.link(up, "IMAGE", save, "images")
+    return g.to_json()
+
+
 def chroma_img2img(manifest: Manifest) -> dict:
     f = _files(manifest)
     g = Graph()
@@ -642,6 +718,7 @@ def chroma_img2img(manifest: Manifest) -> dict:
 ALL_WORKFLOWS = {
     "wan22_i2v_remix.json": lambda m, gguf=False: wan22_i2v(m, remix=True, gguf=gguf),
     "wan22_i2v_firstlast.json": lambda m, gguf=False: wan22_i2v_firstlast(m, gguf=gguf),
+    "sdxl_txt2img_lustify.json": lambda m, gguf=False: sdxl_txt2img_lustify(m),
     "sdxl_img2img_reference.json": lambda m, gguf=False: sdxl_img2img_reference(m),
     "sdxl_faceid_character.json": lambda m, gguf=False: sdxl_faceid_character(m),
     "chroma_img2img.json": lambda m, gguf=False: chroma_img2img(m),

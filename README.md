@@ -60,7 +60,11 @@ Interrupted downloads always continue where they left off.
 - `wan22_i2v_firstlast` — give a first **and** last frame; it animates between
   them. Perfect for planned shot transitions.
 
-**Images (reference image → new image, SDXL & Chroma):**
+**Images (SDXL & Chroma):**
+- `sdxl_txt2img_lustify` — pure **text-to-image** on LUSTIFY: describe a scene,
+  get a photo, no reference image needed. Has a slot for a **character LoRA** you
+  trained (see "Train your own character" below) — drop it in and put its trigger
+  word in the prompt.
 - `sdxl_img2img_reference` — the workhorse. Your reference image goes in; the
   **denoise dial** decides how much changes (0.3 = touch-up … 0.75 = reimagine).
   IP-Adapter carries the subject/style over; optional ControlNet locks the pose.
