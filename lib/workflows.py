@@ -30,6 +30,11 @@ NODE_DEFS = {
     "LoraLoader":             ([("model", "MODEL"), ("clip", "CLIP")],
                                [("MODEL", "MODEL"), ("CLIP", "CLIP")]),
     "ModelSamplingSD3":       ([("model", "MODEL")], [("MODEL", "MODEL")]),
+    "ModelSamplingAuraFlow":  ([("model", "MODEL")], [("MODEL", "MODEL")]),
+    "TextEncodeQwenImageEditPlus": ([("clip", "CLIP"), ("vae", "VAE"),
+                                     ("image1", "IMAGE"), ("image2", "IMAGE"),
+                                     ("image3", "IMAGE")],
+                                    [("CONDITIONING", "CONDITIONING")]),
     "WanImageToVideo":        ([("positive", "CONDITIONING"), ("negative", "CONDITIONING"),
                                 ("vae", "VAE"), ("start_image", "IMAGE")],
                                [("positive", "CONDITIONING"), ("negative", "CONDITIONING"),
@@ -684,6 +689,100 @@ def sdxl_txt2img_lustify(manifest: Manifest) -> dict:
     return g.to_json()
 
 
+def qwen_edit_character(manifest: Manifest, gguf: bool = False) -> dict:
+    """Instruction-based editing (Qwen Image Edit 2511): same character, new scene.
+
+    Unlike img2img, the reference enters through the conditioning (identity is
+    the model's training objective) and the text instruction drives the scene —
+    so there is no identity-vs-change denoise tradeoff; denoise stays 1.0.
+    """
+    f = _files(manifest)
+    model_file = f.get("qwen-edit-2511-gguf-q4ks" if gguf else "qwen-edit-2511-fp8",
+                       "qwen_image_edit_2511_fp8mixed.safetensors")
+    loader = "UnetLoaderGGUF" if gguf else "UNETLoader"
+    lw = (lambda n: [n]) if gguf else (lambda n: [n, "default"])
+
+    g = Graph()
+    note = g.add("Note", (-80, -400), size=(540, 340), title="README — same character, new scene")
+    note["widgets_values"] = [
+        "QWEN EDIT — CHANGE THE SCENE, KEEP THE CHARACTER.\n\n"
+        "This is a different kind of workflow: you give it a photo and an "
+        "INSTRUCTION, like editing with words. The model was trained to keep the "
+        "person identical while doing what you ask.\n\n"
+        "PROMPT LIKE THIS (instructions, not descriptions):\n"
+        "  'She is now dancing in a crowded nightclub, colorful lights'\n"
+        "  'Change the background to a beach at sunset, keep her pose'\n"
+        "  'Same woman, now wearing a red evening dress, standing in the rain'\n\n"
+        "DO NOT touch denoise — it stays at 1.0 by design here; the reference "
+        "image is carried through the conditioning, not the canvas.\n\n"
+        "NSFW: the purple 'NSFW unlock' LoRA node is bypassed by default. "
+        "Right-click -> Bypass to enable it for explicit edits (weight ~0.8).\n\n"
+        "SPEED: runs 8 steps via the Lightning LoRA (cfg 1.0). For maximum "
+        "quality: bypass the Lightning LoRA and set the sampler to 20 steps, "
+        "cfg 2.5.\n\n"
+        "12GB laptop: first generation takes a while (big model, partial "
+        "offload). The cloud pod is much faster."]
+
+    ref = g.add("LoadImage", (-80, 0), widgets=["character.png", "image"],
+                title="Character photo (who to keep)", size=(340, 320))
+    scale = g.add("ImageScaleToTotalPixels", (300, 40), widgets=["lanczos", 1.0],
+                  title="Fit to ~1MP")
+    unet = g.add(loader, (300, 180), widgets=lw(model_file),
+                 title="Qwen Edit 2511")
+    light = g.add("LoraLoaderModelOnly", (680, 180),
+                  widgets=[f.get("qwen-edit-lightning-8step",
+                                 "Qwen-Image-Edit-2509-Lightning-8steps-V1.0-bf16.safetensors"), 1.0],
+                  title="Lightning 8-step (leave on for speed)")
+    nsfw = g.add("LoraLoaderModelOnly", (680, 320), mode=BYPASS,
+                 widgets=[f.get("qwen-edit-2511-nsfw-lora",
+                                "Qwen_Edit_2511_All_included_v1.safetensors"), 0.8],
+                 title="NSFW unlock (bypassed - enable for explicit edits)")
+    shift = g.add("ModelSamplingAuraFlow", (1060, 180), widgets=[3.1])
+
+    clip = g.add("CLIPLoader", (-80, 380),
+                 widgets=[f.get("qwen25-vl-7b-encoder", "qwen_2.5_vl_7b_fp8_scaled.safetensors"),
+                          "qwen_image", "default"], title="Qwen text encoder")
+    vae = g.add("VAELoader", (-80, 520),
+                widgets=[f.get("qwen-image-vae", "qwen_image_vae.safetensors")],
+                title="Qwen VAE")
+
+    pos = g.add("TextEncodeQwenImageEditPlus", (680, 480), size=(420, 200),
+                widgets=["She is now dancing in a crowded nightclub, colorful "
+                         "lights, candid photo, natural skin texture"],
+                title="INSTRUCTION (what should change)")
+    neg = g.add("TextEncodeQwenImageEditPlus", (680, 720), size=(420, 140),
+                widgets=["blurry, low quality, cartoon, deformed"],
+                title="Negative (what to avoid)")
+    enc = g.add("VAEEncode", (300, 720), title="Reference -> latent")
+
+    ks = g.add("KSampler", (1160, 480),
+               widgets=[1234567890, "randomize", 8, 1.0, "euler", "simple", 1.0],
+               title="Sampler (8 steps cfg 1.0 with Lightning)", size=(320, 280))
+    dec = g.add("VAEDecode", (1520, 480))
+    save = g.add("SaveImage", (1880, 480), widgets=["qwen_edit"], size=(360, 400))
+
+    g.link(ref, "IMAGE", scale, "image")
+    g.link(unet, "MODEL", light, "model")
+    g.link(light, "MODEL", nsfw, "model")
+    g.link(nsfw, "MODEL", shift, "model")
+    g.link(clip, "CLIP", pos, "clip")
+    g.link(clip, "CLIP", neg, "clip")
+    g.link(vae, "VAE", pos, "vae")
+    g.link(vae, "VAE", neg, "vae")
+    g.link(scale, "IMAGE", pos, "image1")
+    g.link(scale, "IMAGE", neg, "image1")
+    g.link(scale, "IMAGE", enc, "pixels")
+    g.link(vae, "VAE", enc, "vae")
+    g.link(shift, "MODEL", ks, "model")
+    g.link(pos, "CONDITIONING", ks, "positive")
+    g.link(neg, "CONDITIONING", ks, "negative")
+    g.link(enc, "LATENT", ks, "latent_image")
+    g.link(ks, "LATENT", dec, "samples")
+    g.link(vae, "VAE", dec, "vae")
+    g.link(dec, "IMAGE", save, "images")
+    return g.to_json()
+
+
 def chroma_img2img(manifest: Manifest) -> dict:
     f = _files(manifest)
     g = Graph()
@@ -838,6 +937,7 @@ ALL_WORKFLOWS = {
     "wan22_i2v_remix.json": lambda m, gguf=False: wan22_i2v(m, remix=True, gguf=gguf),
     "wan22_i2v_firstlast.json": lambda m, gguf=False: wan22_i2v_firstlast(m, gguf=gguf),
     "sdxl_txt2img_lustify.json": lambda m, gguf=False: sdxl_txt2img_lustify(m),
+    "qwen_edit_character.json": lambda m, gguf=False: qwen_edit_character(m, gguf=gguf),
     "sdxl_img2img_reference.json": lambda m, gguf=False: sdxl_img2img_reference(m),
     "sdxl_faceid_character.json": lambda m, gguf=False: sdxl_faceid_character(m),
     "chroma_img2img.json": lambda m, gguf=False: chroma_img2img(m),

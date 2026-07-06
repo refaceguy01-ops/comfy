@@ -218,6 +218,72 @@ models:
 
   # ────────────────────────── IMAGE STACK ──────────────────────────
 
+  # ── Qwen Image Edit 2511: instruction-based editing (same character, new
+  # scene). Give it a photo + "now she's dancing in a nightclub" — identity
+  # preservation is the model's training objective, unlike img2img denoise. ──
+
+  - name: qwen-edit-2511-fp8
+    desc: Qwen Image Edit 2511 fp8 (instruction editing, keeps character identity)
+    source: huggingface
+    repo: Comfy-Org/Qwen-Image-Edit_ComfyUI
+    file: split_files/diffusion_models/qwen_image_edit_2511_fp8mixed.safetensors
+    dest: models/diffusion_models
+    size_gb: 20.5
+    tags: [image, required]
+    profiles: [local-24gb, cloud, cloud-80gb]
+
+  - name: qwen-edit-2511-gguf-q4ks
+    desc: Qwen Image Edit 2511 GGUF Q4_K_S (12GB-friendly quant)
+    source: huggingface
+    repo: unsloth/Qwen-Image-Edit-2511-GGUF
+    file: qwen-image-edit-2511-Q4_K_S.gguf
+    dest: models/diffusion_models
+    size_gb: 12.4
+    tags: [image, required]
+    profiles: [local-12gb]
+
+  - name: qwen25-vl-7b-encoder
+    desc: Qwen2.5-VL 7B text encoder fp8 (for Qwen Image Edit)
+    source: huggingface
+    repo: Comfy-Org/Qwen-Image_ComfyUI
+    file: split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors
+    dest: models/text_encoders
+    size_gb: 9.4
+    tags: [image, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: qwen-image-vae
+    desc: Qwen Image VAE (for Qwen Image Edit)
+    source: huggingface
+    repo: Comfy-Org/Qwen-Image_ComfyUI
+    file: split_files/vae/qwen_image_vae.safetensors
+    dest: models/vae
+    size_gb: 0.3
+    tags: [image, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: qwen-edit-lightning-8step
+    desc: Lightning 8-step LoRA for Qwen Edit (2509 build, community-standard on 2511)
+    source: huggingface
+    repo: lightx2v/Qwen-Image-Lightning
+    file: Qwen-Image-Edit-2509/Qwen-Image-Edit-2509-Lightning-8steps-V1.0-bf16.safetensors
+    dest: models/loras
+    size_gb: 0.8
+    tags: [image, required]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
+  - name: qwen-edit-2511-nsfw-lora
+    desc: Qwen Edit 2511 NSFW unlock LoRA (community concept LoRA)
+    source: civitai
+    model_id: 2700552
+    version_id: 3032662
+    file: Qwen_Edit_2511_All_included_v1.safetensors
+    dest: models/loras
+    sha256: 1F27F2F5D1E7381DC514AA3DF71618836FC1FC10D343A4EB150890F89DDD98A3
+    size_gb: 0.79
+    tags: [image, optional]
+    profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
+
   - name: chroma1-hd
     desc: Chroma1-HD (Flux-arch, uncensored, best realism) — needs Flux VAE + T5
     source: huggingface

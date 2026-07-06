@@ -60,7 +60,11 @@ Interrupted downloads always continue where they left off.
 - `wan22_i2v_firstlast` — give a first **and** last frame; it animates between
   them. Perfect for planned shot transitions.
 
-**Images (SDXL & Chroma):**
+**Images (SDXL, Qwen & Chroma):**
+- `qwen_edit_character` — **the character workflow**: give it a photo + an
+  instruction ("she's now dancing in a nightclub") and it changes the scene while
+  keeping the person identical. No denoise juggling — identity preservation is
+  what this model is trained for. NSFW unlock LoRA included (bypassed by default).
 - `sdxl_txt2img_lustify` — pure **text-to-image** on LUSTIFY: describe a scene,
   get a photo, no reference image needed. Has a slot for a **character LoRA** you
   trained (see "Train your own character" below) — drop it in and put its trigger
