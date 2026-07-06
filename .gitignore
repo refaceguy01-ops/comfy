@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 .venv/
 licenses.json
+
+# generated on every boot by provision.py workflows — must not be tracked,
+# or the pod git pull conflicts with its own regenerated copies
+workflows/*.json
