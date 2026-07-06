@@ -72,6 +72,10 @@ Interrupted downloads always continue where they left off.
   many shots (film pre-viz). Face reference + body/style reference in, new shot out.
 - `chroma_img2img` — maximum-realism reworking of a reference image.
 
+**Training:**
+- `sdxl_lora_trainer_lustify` — train your **own character LoRA** from a folder of
+  images, right inside ComfyUI (see "Train your own character" below).
+
 Every workflow has a yellow **README note** inside explaining its dials in plain
 English.
 
@@ -83,6 +87,45 @@ English.
   (a style, an outfit, better hands). Stackable, adjustable strength.
 - **VAE** — the translator between the model's internal math and actual pixels.
   Wrong VAE = washed-out colors. Ours are matched automatically.
+- **Trigger word** — a short made-up word (like `ohwxwoman`) that you assign to a
+  character LoRA when training it. Typing that word in a prompt summons the
+  character; leaving it out means they won't appear.
+
+## Train your own character (make a custom LoRA)
+
+You can teach the AI a **fictional** character from your own images, then bring them
+back in any picture by typing a trigger word. It all happens inside ComfyUI — use
+Setup → **[3] Train a character LoRA** for the guided version, or open the
+`sdxl_lora_trainer_lustify` workflow directly.
+
+1. **Build a dataset.** Collect **15–50 images of one character** — face *and*
+   body, different angles, expressions, and outfits. Sharp, well-lit shots.
+   **Variety and quality beat quantity**: 25 good, varied images beat 60 similar
+   blurry ones. Put them in a folder inside ComfyUI's `input` folder, e.g.
+   `input/character_dataset`.
+2. **Pick a trigger word.** A short, unique, made-up word (`ohwxwoman`,
+   `zqkhero`). Avoid real words/names so it doesn't collide with things the model
+   already knows.
+3. **Set three things in the workflow** and press Queue: the folder path, the
+   trigger word (`class_tokens`), and the output name. No captioning required — the
+   trigger word is used as the caption automatically. (Optional: drop a `.txt` file
+   next to each image with a description for sharper results; Florence-2 is
+   installed if you want to auto-generate them.)
+4. **Wait.** Roughly **2–3 hours for ~30 images on a 4090/24GB**; much slower on a
+   12GB laptop (set `blocks_to_swap` to ~20, or just train on a cloud GPU). Preview
+   images appear every 500 steps, and a LoRA is saved into `models/loras` after
+   each of 4 segments — so you get several checkpoints to compare.
+5. **Test it.** Open `sdxl_txt2img_lustify`, pick your new LoRA in the LoRA node,
+   enable it (right-click → Bypass to toggle) at **strength ~0.8**, and put your
+   **trigger word** in the prompt. Try the different saved checkpoints and keep the
+   one that looks best — later checkpoints aren't always better (they can
+   "overcook").
+
+**Fictional characters only.** Do not train on real, identifiable people. A
+character LoRA reproduces a specific face on demand; doing that with a real person's
+likeness without consent is harmful and, in explicit contexts, illegal in most
+jurisdictions (NCII laws). Generate a fictional face first (text-to-image), collect
+shots of *that*, and train on those.
 
 ## Ground rules (please read)
 

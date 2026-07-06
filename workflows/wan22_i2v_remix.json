@@ -214,7 +214,7 @@
   },
   {
    "id": 7,
-   "type": "UNETLoader",
+   "type": "UnetLoaderGGUF",
    "pos": [
     320,
     40
@@ -238,17 +238,16 @@
     }
    ],
    "properties": {
-    "Node name for S&R": "UNETLoader"
+    "Node name for S&R": "UnetLoaderGGUF"
    },
    "widgets_values": [
-    "wan22RemixT2VI2V_i2vHighV30.safetensors",
-    "default"
+    "wan22RemixI2VGGUFV30_highQ6K.gguf"
    ],
    "title": "High-noise model (stage 1)"
   },
   {
    "id": 8,
-   "type": "UNETLoader",
+   "type": "UnetLoaderGGUF",
    "pos": [
     320,
     200
@@ -272,11 +271,10 @@
     }
    ],
    "properties": {
-    "Node name for S&R": "UNETLoader"
+    "Node name for S&R": "UnetLoaderGGUF"
    },
    "widgets_values": [
-    "wan22RemixT2VI2V_i2vLowV30.safetensors",
-    "default"
+    "wan22RemixI2VGGUFV30_lowQ6K.gguf"
    ],
    "title": "Low-noise model (stage 2)"
   },
@@ -751,7 +749,7 @@
     "Node name for S&R": "HunyuanModelLoader"
    },
    "widgets_values": [
-    "hunyuanvideo_foley.safetensors",
+    "hunyuanvideo_foley_fp8_e4m3fn.safetensors",
     "bf16",
     "auto"
    ],

@@ -364,9 +364,41 @@ function showMenu(){$('#app').innerHTML=`
    :S.missing_count+' file(s) are missing.'}</p>
  <button onclick="checkFiles()">1 · Check for missing files</button><br>
  <button onclick="showLora()">2 · Add a LoRA (paste a Civitai link)</button><br>
- <button onclick="reWf()">3 · Reinstall workflows</button><br>
- <button onclick="launch()">4 · Launch ComfyUI</button><br>
+ <button onclick="showTrain()">3 · Train a character LoRA</button><br>
+ <button onclick="reWf()">4 · Reinstall workflows</button><br>
+ <button onclick="launch()">5 · Launch ComfyUI</button><br>
  <button class="alt" onclick="showHelp()">Help</button>
+ <p id="mmsg" class="muted"></p>`;}
+function showTrain(){$('#app').innerHTML=`
+ <h2>Train your own character</h2>
+ <p class="muted">You can teach the AI a brand-new <b>fictional</b> character, then
+ summon them in any image by typing a trigger word. Here's the whole process:</p>
+ <ol class="muted">
+  <li><b>Gather images.</b> 15-50 pictures of ONE character — face and body,
+      different angles, expressions, and outfits. Sharp and well-lit. Quality and
+      variety matter more than quantity.</li>
+  <li><b>Put them in a folder</b> inside ComfyUI's <b>input</b> folder, e.g.
+      <code>input/character_dataset</code>.</li>
+  <li><b>Pick a trigger word</b> — a short, made-up word that becomes the
+      character's name (e.g. <code>ohwxwoman</code>). You'll type it in prompts to
+      bring them back.</li>
+  <li><b>Open the <b>sdxl_lora_trainer_lustify</b> workflow</b> in ComfyUI. Set the
+      folder path, the trigger word, and the character's name, then press Queue.
+      Progress and preview images show inside ComfyUI. Training takes ~1-3 hours
+      (much faster on a 24GB+ cloud GPU).</li>
+  <li>When done, your character LoRA is in <b>models/loras</b>. Load it in the
+      LUSTIFY text-to-image workflow at strength ~0.8 and put your trigger word in
+      the prompt.</li>
+ </ol>
+ <p class="muted"><b>No captioning needed</b> — the trigger word is enough. (For
+ sharper results you can add a .txt caption next to each image, but it's optional;
+ Florence-2 is installed if you want to auto-caption.)</p>
+ <p class="bad"><b>Fictional characters only.</b> Do not train on real, identifiable
+ people — using someone's likeness without consent is harmful and, in explicit
+ contexts, illegal in most places (NCII laws). Generate a fictional face first, then
+ train on images of that.</p>
+ <button onclick="reWf()">Make sure the training workflow is installed</button>
+ <button class="alt" onclick="showMenu()">Back</button>
  <p id="mmsg" class="muted"></p>`;}
 async function checkFiles(){await api('/api/start',{optional:true});showProgress();}
 function showLora(){$('#app').innerHTML=`

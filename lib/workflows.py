@@ -80,7 +80,30 @@ NODE_DEFS = {
     "ImageUpscaleWithModel":  ([("upscale_model", "UPSCALE_MODEL"), ("image", "IMAGE")],
                                [("IMAGE", "IMAGE")]),
     "SaveImage":              ([("images", "IMAGE")], []),
+    "PreviewImage":           ([("images", "IMAGE")], []),
     "Note":                   ([], []),
+    # ── ComfyUI-FluxTrainer (SDXL LoRA training) ──
+    "SDXLModelSelect":        ([], [("sdxl_models", "TRAIN_SDXL_MODELS")]),
+    "TrainDatasetGeneralConfig": ([], [("dataset_general", "JSON")]),
+    "TrainDatasetAdd":        ([("dataset_config", "JSON")], [("dataset", "JSON")]),
+    "OptimizerConfigAdafactor": ([], [("optimizer_settings", "ARGS")]),
+    "InitSDXLLoRATraining":   ([("SDXL_models", "TRAIN_SDXL_MODELS"), ("dataset", "JSON"),
+                                ("optimizer_settings", "ARGS")],
+                               [("network_trainer", "NETWORKTRAINER"),
+                                ("epochs_count", "INT"), ("args", "KOHYA_ARGS")]),
+    "SDXLTrainValidationSettings": ([], [("validation_settings", "VALSETTINGS")]),
+    "FluxTrainLoop":          ([("network_trainer", "NETWORKTRAINER")],
+                               [("network_trainer", "NETWORKTRAINER"), ("steps", "INT")]),
+    "FluxTrainSave":          ([("network_trainer", "NETWORKTRAINER")],
+                               [("network_trainer", "NETWORKTRAINER"),
+                                ("lora_path", "STRING"), ("steps", "INT")]),
+    "SDXLTrainValidate":      ([("network_trainer", "NETWORKTRAINER"),
+                                ("validation_settings", "VALSETTINGS")],
+                               [("network_trainer", "NETWORKTRAINER"),
+                                ("validation_images", "IMAGE")]),
+    "FluxTrainEnd":           ([("network_trainer", "NETWORKTRAINER")],
+                               [("lora_name", "STRING"), ("metadata", "STRING"),
+                                ("lora_path", "STRING")]),
 }
 
 
@@ -715,6 +738,102 @@ def chroma_img2img(manifest: Manifest) -> dict:
     return g.to_json()
 
 
+def sdxl_lora_trainer_lustify(manifest: Manifest) -> dict:
+    """Train a character LoRA on LUSTIFY, inside ComfyUI (ComfyUI-FluxTrainer).
+
+    Widget arrays are copied from FluxTrainer's tested sdxl_train_example_01.json
+    and patched to character-LoRA best-practice defaults; only understood values
+    are changed so the (untestable-here) node widget order stays known-good.
+    Trigger-word driven: no caption files needed — FluxTrainer uses class_tokens
+    as the caption when none exist. 4 x 500 steps = 2000, saving a LoRA into
+    models/loras after every segment so you can pick the best checkpoint.
+    """
+    f = _files(manifest)
+    ckpt = f.get("lustify-olt", "lustifySDXLNSFW_oltFIXEDTEXTURES.safetensors")
+    g = Graph()
+
+    note = g.add("Note", (-80, -420), size=(560, 380), title="README — train a character LoRA")
+    note["widgets_values"] = [
+        "TRAIN YOUR OWN CHARACTER LoRA (on LUSTIFY)\n\n"
+        "1. DATASET: make a folder of 15-50 images of ONE character — face + body, "
+        "varied angles/expressions/outfits, sharp and well-lit. Put it inside "
+        "ComfyUI's 'input' folder, e.g. input/character_dataset.\n"
+        "2. TRIGGER WORD: in the 'Dataset' node set 'class_tokens' to a short, "
+        "UNIQUE made-up word (e.g. 'ohwxwoman'). That word becomes the character's "
+        "name — you type it in prompts later to summon them. No caption files "
+        "needed: the trigger word is used as the caption automatically.\n"
+        "3. Point 'dataset_path' at your folder (relative to the ComfyUI folder).\n"
+        "4. Set 'output_name' to your character's name.\n"
+        "5. Press Queue. Training takes ~1-3 hours (fast on a 24GB+ cloud GPU). "
+        "Preview images appear every 500 steps; a .safetensors LoRA is saved into "
+        "models/loras after each segment (4 total) — try each, keep the best.\n\n"
+        "USE IT: open the LUSTIFY text-to-image workflow, pick your LoRA in the "
+        "LoRA node, enable it (weight ~0.8), and put your TRIGGER WORD in the "
+        "prompt.\n\n"
+        "12GB laptop: training SDXL is very tight — set 'blocks_to_swap' to ~20 in "
+        "the Init node, or train on a cloud GPU. 24GB+ trains comfortably at "
+        "defaults.\n\n"
+        "RULES: fictional characters only. Do NOT train on real, identifiable "
+        "people — using someone's likeness without consent is harmful and, in "
+        "explicit contexts, illegal in most places (NCII laws). Make a fictional "
+        "face first (text-to-image), collect shots of THAT, and train on those."]
+
+    model = g.add("SDXLModelSelect", (-80, 40), widgets=[ckpt, ""],
+                  title="Base checkpoint (LUSTIFY)")
+    dsgen = g.add("TrainDatasetGeneralConfig", (-80, 220),
+                  widgets=[False, False, False, 0, False, False, ".txt"],
+                  title="Dataset options")
+    dsadd = g.add("TrainDatasetAdd", (-80, 440), size=(360, 320),
+                  widgets=[1024, 1024, 1, "input/character_dataset", "ohwxwoman",
+                           True, False, 1, 256, 1024],
+                  title="Dataset (set folder path + TRIGGER WORD)")
+    opt = g.add("OptimizerConfigAdafactor", (-80, 800), size=(340, 300),
+                widgets=[0, "cosine", 0, 1, 1, False, False, False, 1, 5, ""],
+                title="Optimizer (Adafactor, cosine)")
+
+    init = g.add("InitSDXLLoRATraining", (360, 40), size=(360, 560),
+                 widgets=["char_lora", "sdxl_trainer_output", 32, 16, 0.0001, 2000,
+                          "disk", "disk", False, 0, False, "bf16", "fp16", "sdpa",
+                          "disabled", 0, 0,
+                          "photo of ohwxwoman, standing outdoors, natural light",
+                          "bad quality, worst quality, deformed", "enabled", ""],
+                 title="Training settings (rank 32 / alpha 16 / 1e-4 / 2000 steps)")
+
+    valset = g.add("SDXLTrainValidationSettings", (360, 640), size=(320, 220),
+                   widgets=[20, 832, 1216, 4.5, "euler", 42, "fixed"],
+                   title="Preview settings")
+
+    # thread network_trainer through 4 x 500-step segments, saving + previewing
+    x = 780
+    prev_nt = (init, "network_trainer")
+    for i in range(1, 5):
+        loop = g.add("FluxTrainLoop", (x, 40), widgets=[500],
+                     title=f"Train 500 steps ({i}/4)")
+        g.link(prev_nt[0], prev_nt[1], loop, "network_trainer")
+        save = g.add("FluxTrainSave", (x, 220), widgets=[False, True],
+                     title=f"Save LoRA -> models/loras ({i})")
+        g.link(loop, "network_trainer", save, "network_trainer")
+        if i < 4:
+            val = g.add("SDXLTrainValidate", (x, 400),
+                        title=f"Preview ({i})")
+            g.link(save, "network_trainer", val, "network_trainer")
+            g.link(valset, "validation_settings", val, "validation_settings")
+            prev = g.add("PreviewImage", (x, 560), title=f"Sample images ({i})")
+            g.link(val, "validation_images", prev, "images")
+            prev_nt = (val, "network_trainer")
+        else:
+            end = g.add("FluxTrainEnd", (x, 400), widgets=[False],
+                        title="Finish training")
+            g.link(save, "network_trainer", end, "network_trainer")
+        x += 380
+
+    g.link(model, "sdxl_models", init, "SDXL_models")
+    g.link(dsgen, "dataset_general", dsadd, "dataset_config")
+    g.link(dsadd, "dataset", init, "dataset")
+    g.link(opt, "optimizer_settings", init, "optimizer_settings")
+    return g.to_json()
+
+
 ALL_WORKFLOWS = {
     "wan22_i2v_remix.json": lambda m, gguf=False: wan22_i2v(m, remix=True, gguf=gguf),
     "wan22_i2v_firstlast.json": lambda m, gguf=False: wan22_i2v_firstlast(m, gguf=gguf),
@@ -722,6 +841,7 @@ ALL_WORKFLOWS = {
     "sdxl_img2img_reference.json": lambda m, gguf=False: sdxl_img2img_reference(m),
     "sdxl_faceid_character.json": lambda m, gguf=False: sdxl_faceid_character(m),
     "chroma_img2img.json": lambda m, gguf=False: chroma_img2img(m),
+    "sdxl_lora_trainer_lustify.json": lambda m, gguf=False: sdxl_lora_trainer_lustify(m),
 }
 
 

@@ -31,6 +31,8 @@ CUSTOM_NODES = [
     ("cubiq/ComfyUI_IPAdapter_plus", False),
     ("Fannovel16/comfyui_controlnet_aux", True),
     ("phazei/ComfyUI-HunyuanVideo-Foley", True),
+    ("kijai/ComfyUI-FluxTrainer", True),   # SDXL LoRA training (has SDXL nodes)
+    ("kijai/ComfyUI-Florence2", True),     # optional dataset captioning
 ]
 
 COMMON_WINDOWS_PATHS = [
