@@ -701,6 +701,7 @@ def qwen_edit_character(manifest: Manifest, gguf: bool = False) -> dict:
                        "qwen_image_edit_2511_fp8mixed.safetensors")
     loader = "UnetLoaderGGUF" if gguf else "UNETLoader"
     lw = (lambda n: [n]) if gguf else (lambda n: [n, "default"])
+    megapixels = 0.6 if gguf else 1.0  # 12GB cards: smaller canvas = less VRAM
 
     g = Graph()
     note = g.add("Note", (-80, -400), size=(540, 340), title="README — same character, new scene")
@@ -725,8 +726,8 @@ def qwen_edit_character(manifest: Manifest, gguf: bool = False) -> dict:
 
     ref = g.add("LoadImage", (-80, 0), widgets=["character.png", "image"],
                 title="Character photo (who to keep)", size=(340, 320))
-    scale = g.add("ImageScaleToTotalPixels", (300, 40), widgets=["lanczos", 1.0],
-                  title="Fit to ~1MP")
+    scale = g.add("ImageScaleToTotalPixels", (300, 40), widgets=["lanczos", megapixels],
+                  title=f"Fit to ~{megapixels}MP")
     unet = g.add(loader, (300, 180), widgets=lw(model_file),
                  title="Qwen Edit 2511")
     light = g.add("LoraLoaderModelOnly", (680, 180),

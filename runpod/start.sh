@@ -80,6 +80,15 @@ echo "[start.sh] Ensuring ComfyUI requirements in $PYBIN..."
 # (a quiet earlier failure here served 404s with a healthy API)
 "$PYBIN" -m pip install --upgrade comfyui-frontend-package \
     comfyui-workflow-templates comfyui-embedded-docs || true
+# JupyterLab on :8888 for drag-and-drop dataset uploads (LoRA training).
+# Background, no token (it sits behind RunPod's authenticated proxy).
+if command -v jupyter >/dev/null 2>&1; then
+    echo "[start.sh] Starting JupyterLab on :8888 (file uploads)"
+    jupyter lab --allow-root --no-browser --ip 0.0.0.0 --port 8888 \
+        --ServerApp.token='' --ServerApp.password='' \
+        --ServerApp.root_dir="$WORKSPACE" >"$WORKSPACE/jupyter.log" 2>&1 &
+fi
+
 echo "[start.sh] Starting ComfyUI on :8188"
 # --enable-cors-header: ComfyUI's host/origin check 403s behind RunPod's
 # proxy (github.com/Comfy-Org/ComfyUI/issues/4865); this flag relaxes it.
