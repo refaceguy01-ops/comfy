@@ -195,6 +195,14 @@ def install_custom_nodes(comfy_root: Path, log=print) -> list[str]:
     except Exception:
         failures.append("insightface (only the FaceID workflow needs it — "
                         "see TROUBLESHOOTING.md)")
+    # FluxTrainer (sd-scripts) pins numpy<=1.26.4, which downgrades numpy and
+    # breaks ComfyUI's numpy-2.x deps (opencv, scipy, tifffile → video +
+    # controlnet nodes). Restore numpy LAST; FluxTrainer tolerates 2.x fine.
+    try:
+        subprocess.run([*py, "-m", "pip", "install", "numpy>=2.1,<2.8"],
+                       check=False, capture_output=True, timeout=600)
+    except Exception:
+        pass
     return failures
 
 
