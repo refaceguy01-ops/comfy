@@ -96,6 +96,12 @@ done
 # FluxTrainer (sd-scripts) pins numpy<=1.26.4, which breaks ComfyUI's numpy-2.x
 # deps (opencv/scipy/tifffile -> video + controlnet nodes). Restore it LAST.
 "$PYBIN" -m pip install -q "numpy>=2.1,<2.8" || true
+# FluxTrainer imports transformers' CLIPFeatureExtractor, removed in transformers
+# 5.x -> whole pack fails to load. Alias it to the current name. Idempotent.
+FT_LPW="$COMFY/custom_nodes/ComfyUI-FluxTrainer/library/sdxl_lpw_stable_diffusion.py"
+[ -f "$FT_LPW" ] && sed -i \
+    's/import CLIPFeatureExtractor,/import CLIPImageProcessor as CLIPFeatureExtractor,/' \
+    "$FT_LPW" || true
 
 # JupyterLab on :8888 for drag-and-drop dataset uploads (LoRA training)
 if command -v jupyter >/dev/null 2>&1; then

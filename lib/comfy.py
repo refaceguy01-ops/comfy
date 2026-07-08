@@ -187,6 +187,7 @@ def install_custom_nodes(comfy_root: Path, log=print) -> list[str]:
                                check=True, capture_output=True)
         except Exception as exc:
             failures.append(f"{name}: {exc}")
+    _patch_fluxtrainer(nodes_dir)
     # FaceID workflows need insightface; wheels exist for common setups but the
     # install can fail without a C++ toolchain — best-effort, non-fatal.
     try:
@@ -204,6 +205,20 @@ def install_custom_nodes(comfy_root: Path, log=print) -> list[str]:
     except Exception:
         pass
     return failures
+
+
+def _patch_fluxtrainer(nodes_dir: Path) -> None:
+    """FluxTrainer imports transformers' CLIPFeatureExtractor, which was removed
+    in transformers 5.x — the whole pack then fails to import. Alias it to the
+    current name (CLIPImageProcessor). Idempotent; safe to run every boot."""
+    lpw = nodes_dir / "ComfyUI-FluxTrainer" / "library" / "sdxl_lpw_stable_diffusion.py"
+    if not lpw.exists():
+        return
+    txt = lpw.read_text(encoding="utf-8")
+    if "import CLIPFeatureExtractor," in txt:
+        lpw.write_text(txt.replace(
+            "import CLIPFeatureExtractor,",
+            "import CLIPImageProcessor as CLIPFeatureExtractor,"), encoding="utf-8")
 
 
 def install_sageattention(comfy_root: Path, log=print) -> bool:
