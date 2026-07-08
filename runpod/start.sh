@@ -102,6 +102,10 @@ FT_LPW="$COMFY/custom_nodes/ComfyUI-FluxTrainer/library/sdxl_lpw_stable_diffusio
 [ -f "$FT_LPW" ] && sed -i \
     's/import CLIPFeatureExtractor,/import CLIPImageProcessor as CLIPFeatureExtractor,/' \
     "$FT_LPW" || true
+# FluxTrainer/sd-scripts targets transformers 4.x — 5.x restructured CLIPTextModel
+# and training fails loading the text encoder. Pin <5 (4.49+ keeps ComfyUI + Qwen
+# working; ComfyUI's own SDXL/Wan/Qwen model code is unaffected).
+"$PYBIN" -m pip install -q "transformers>=4.49,<5" || true
 
 # JupyterLab on :8888 for drag-and-drop dataset uploads (LoRA training)
 if command -v jupyter >/dev/null 2>&1; then

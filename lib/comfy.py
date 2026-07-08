@@ -204,6 +204,15 @@ def install_custom_nodes(comfy_root: Path, log=print) -> list[str]:
                        check=False, capture_output=True, timeout=600)
     except Exception:
         pass
+    # FluxTrainer/sd-scripts targets transformers 4.x — transformers 5.x removed
+    # CLIPFeatureExtractor and restructured CLIPTextModel, so training fails on
+    # text-encoder load. Pin <5 (4.49+ still supports ComfyUI + Qwen2.5-VL).
+    # ComfyUI's own model code (SDXL/Wan/Qwen) is unaffected by this.
+    try:
+        subprocess.run([*py, "-m", "pip", "install", "transformers>=4.49,<5"],
+                       check=False, capture_output=True, timeout=600)
+    except Exception:
+        pass
     return failures
 
 
