@@ -934,6 +934,130 @@ def sdxl_lora_trainer_lustify(manifest: Manifest) -> dict:
     return g.to_json()
 
 
+# ───────────────────── MiniMax H3 (from official templates) ─────────────────────
+#
+# H3's graph is large and uses subgraph definitions, so we do NOT hand-build it.
+# We vendor ComfyUI's own templates (templates/video_minimax_h3_*.json, fetched
+# from Comfy-Org/workflow_templates) and rewrite only the model filenames to
+# manifest values. On the cloud profiles those filenames already match, so the
+# graph is byte-identical to the official one apart from our added note.
+
+TEMPLATES_DIR = REPO_ROOT / "templates"
+
+# official filename in the template  ->  manifest entry name (safetensors / gguf)
+H3_FILE_MAP = {
+    "minimax_h3_ref2va_pruned_int8_convrot.safetensors":
+        ("minimax-h3-ref2va-int8", "minimax-h3-ref2va-gguf-q4km"),
+    "minimax_h3_fl2va_pruned_int8_convrot.safetensors":
+        ("minimax-h3-fl2va-int8", "minimax-h3-fl2va-gguf-q4km"),
+    "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors":
+        ("minimax-h3-text-encoder", "minimax-h3-text-encoder-gguf"),
+    "minimax_h3_video_vae_fp16.safetensors":
+        ("minimax-h3-video-vae", "minimax-h3-video-vae"),
+    "minimax_h3_audio_vae_fp32.safetensors":
+        ("minimax-h3-audio-vae", "minimax-h3-audio-vae"),
+}
+
+H3_NOTE = (
+    "## How to drive MiniMax H3\n\n"
+    "H3 makes **2K video at 24fps with its own synchronized sound** (voices, "
+    "effects, music) in one pass. Clips run about **5-15 seconds**.\n\n"
+    "### Referencing your inputs\n"
+    "Connect reference images/videos/audio, then point at them **in the prompt "
+    "by tag, numbered in the order you connected them**:\n\n"
+    "- `<Picture 1>`, `<Picture 2>` ... up to 9 reference images\n"
+    "- `<Video 1>` ... up to 3 reference videos\n"
+    "- `<Audio 1>` ... up to 3 reference audio clips\n\n"
+    "Example: *\"Use `<Picture 1>` as the character and `<Audio 1>` exactly as "
+    "it is. She walks through neon rain as the camera pushes in.\"*\n\n"
+    "The tag numbers follow **connection order, not the node names** — if you "
+    "rewire inputs, renumber the tags in your prompt.\n\n"
+    "### ⚠ Check the audio before you use it\n"
+    "The sound is generated, not recorded, and it is **not reliable** — speech "
+    "can come out garbled, mistimed, or in the wrong voice. **Always listen to "
+    "the result before using it anywhere.** Treat the audio as a draft; if it "
+    "misses, re-roll the seed or describe the sound more concretely in the "
+    "prompt.\n\n"
+    "### Settings worth knowing\n"
+    "- **ref_image_size**: `match` is faster; `max` keeps more identity detail "
+    "but slows every sampling step.\n"
+    "- **Scheduler**: the official note suggests `beta` or `normal` over "
+    "`simple` for reference-heavy prompts.\n"
+    "- **Duration**: set seconds on the Float node; it is converted to a valid "
+    "frame count automatically.\n\n"
+    "### H3 vs Wan 2.2 Remix\n"
+    "H3 = 2K, native sound, multi-reference — but far heavier and slower. "
+    "Wan 2.2 Remix = 720p, silent, much faster. Use Wan for iteration and H3 "
+    "for finals that need sound or several references."
+)
+
+
+def _h3_from_template(manifest: Manifest, template: str, gguf: bool = False,
+                      note: str = H3_NOTE) -> dict:
+    """Load an official H3 template and point it at our manifest's files."""
+    data = json.loads((TEMPLATES_DIR / template).read_text(encoding="utf-8"))
+    files = _files(manifest)
+
+    subs = {}
+    for official, (st_entry, gguf_entry) in H3_FILE_MAP.items():
+        want = files.get(gguf_entry if gguf else st_entry)
+        if want and want != official:
+            subs[official] = want
+
+    def patch(node):
+        # Exact-match only: loader/subgraph widgets hold the bare filename,
+        # while the official MarkdownNotes merely mention it in prose.
+        wv = node.get("widgets_values")
+        if isinstance(wv, list):
+            node["widgets_values"] = [subs.get(v, v) if isinstance(v, str) else v
+                                      for v in wv]
+        if gguf:
+            if node.get("type") == "UNETLoader":
+                node["type"] = "UnetLoaderGGUF"
+                node["widgets_values"] = (node.get("widgets_values") or [""])[:1]
+            elif node.get("type") == "CLIPLoader":
+                node["type"] = "CLIPLoaderGGUF"
+                node["widgets_values"] = (node.get("widgets_values") or ["", "minimax"])[:2]
+            props = node.get("properties")
+            if isinstance(props, dict) and "Node name for S&R" in props:
+                props["Node name for S&R"] = node["type"]
+
+    for node in data.get("nodes", []):
+        patch(node)
+    # subgraph-based templates (i2v/t2v) keep their loaders in `definitions`
+    for sub in (data.get("definitions") or {}).get("subgraphs", []) or []:
+        for node in sub.get("nodes", []):
+            patch(node)
+
+    _h3_add_note(data, note)
+    return data
+
+
+def _h3_add_note(data: dict, text: str) -> None:
+    """Append our plain-English MarkdownNote, cloned from an existing one so the
+    node shape always matches whatever schema the template was authored in."""
+    nodes = data.get("nodes", [])
+    template_note = next((n for n in nodes if n.get("type") == "MarkdownNote"), None)
+    new_id = max([n.get("id", 0) for n in nodes] + [data.get("last_node_id", 0)]) + 1
+    if template_note is not None:
+        note = json.loads(json.dumps(template_note))
+        note["id"] = new_id
+        note["title"] = "READ ME — reference tags, length, audio caveat"
+        note["widgets_values"] = [text]
+        pos = template_note.get("pos") or [0, 0]
+        note["pos"] = [pos[0], pos[1] - 900]
+        note["size"] = [560, 840]
+    else:
+        note = {"id": new_id, "type": "MarkdownNote", "pos": [0, -900],
+                "size": [560, 840], "flags": {}, "order": 0, "mode": 0,
+                "inputs": [], "outputs": [], "properties": {},
+                "widgets_values": [text],
+                "title": "READ ME — reference tags, length, audio caveat",
+                "color": "#432", "bgcolor": "#653"}
+    nodes.append(note)
+    data["last_node_id"] = new_id
+
+
 ALL_WORKFLOWS = {
     "wan22_i2v_remix.json": lambda m, gguf=False: wan22_i2v(m, remix=True, gguf=gguf),
     "wan22_i2v_firstlast.json": lambda m, gguf=False: wan22_i2v_firstlast(m, gguf=gguf),
@@ -946,9 +1070,19 @@ ALL_WORKFLOWS = {
 }
 
 
+# H3 workflows, generated only for profiles that actually download H3.
+# R2V is the priority (reference-driven); T2V is secondary — it needs no extra
+# weights (same FL2VA transformer as I2V), so it costs nothing to ship.
+H3_WORKFLOWS = {
+    "minimax_h3_r2v.json": "video_minimax_h3_r2v.json",
+    "minimax_h3_i2v.json": "video_minimax_h3_i2v.json",
+    "minimax_h3_t2v.json": "video_minimax_h3_t2v.json",
+}
+
+
 def generate_all(manifest: Manifest, out_dir: Path = OUTPUT_DIR,
                  profile: str | None = None) -> list[Path]:
-    gguf = profile == "local-12gb"  # that profile downloads GGUF video models
+    gguf = profile == "local-12gb"  # that profile downloads GGUF Wan models
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
     for filename, fn in ALL_WORKFLOWS.items():
@@ -956,4 +1090,27 @@ def generate_all(manifest: Manifest, out_dir: Path = OUTPUT_DIR,
         path = out_dir / filename
         path.write_text(json.dumps(data, indent=1), encoding="utf-8")
         written.append(path)
+
+    # ── MiniMax H3 ──
+    h3_names = {e.name for e in manifest.entries_for(profile) if "minimax-h3" in e.tags} \
+        if profile else set()
+    if h3_names:
+        h3_gguf = any(n.endswith("-gguf-q4km") or n.endswith("-encoder-gguf")
+                      for n in h3_names)
+        for out_name, template in H3_WORKFLOWS.items():
+            if not (TEMPLATES_DIR / template).exists():
+                continue
+            # the GGUF (24GB) tier only ships the Ref2VA/FL2VA unets we listed;
+            # skip any H3 workflow whose transformer isn't in this profile
+            needs_fl2va = "r2v" not in out_name
+            have_fl2va = any("fl2va" in n for n in h3_names)
+            have_ref2va = any("ref2va" in n for n in h3_names)
+            if needs_fl2va and not have_fl2va:
+                continue
+            if not needs_fl2va and not have_ref2va:
+                continue
+            data = _h3_from_template(manifest, template, gguf=h3_gguf)
+            path = out_dir / out_name
+            path.write_text(json.dumps(data, indent=1), encoding="utf-8")
+            written.append(path)
     return written

@@ -216,6 +216,122 @@ models:
     tags: [video, required]
     profiles: [local-12gb, local-24gb, cloud, cloud-80gb]
 
+  # ─────────── MiniMax H3 (Hailuo 3.0): 2K video WITH native audio ───────────
+  #
+  # Reference-driven video: up to 9 reference images / 3 ref videos / 3 ref
+  # audios, tagged in the prompt as <Picture 1>, <Video 1>, <Audio 1>.
+  # Needs ComfyUI >= 0.30.0 (native support; no custom node on this path).
+  #
+  # SIZE WARNING: the pruned INT8 set is ~42.5 GB for one transformer + encoder
+  # + VAEs, ~63 GB with both transformers. Everything is tagged `minimax-h3`
+  # so the wizard can offer it as a single opt-in, and `optional` so
+  # `--required-only` skips it.
+  #
+  # LICENSE: MiniMax H3 Community License Agreement — NOT MIT, unlike MiniMax's
+  # earlier releases. Recorded into licenses.json by the downloader.
+  #
+  # VRAM: 42.5 GB minimum footprint. Fine on 48GB+ (and workable on 24-32GB via
+  # ComfyUI's dynamic offload, slowly). Deliberately NOT on local-12gb — a 12GB
+  # card cannot run this in any usable way, even quantized.
+
+  - name: minimax-h3-ref2va-int8
+    desc: MiniMax H3 Ref2VA pruned INT8 (reference-to-video — the main H3 workflow)
+    source: huggingface
+    repo: Comfy-Org/MiniMax-H3
+    file: diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors
+    dest: models/diffusion_models
+    sha256: 9255F52B6677845AD238F20DFAAFA94727053694127AB7F255C048F0F9365779
+    size_gb: 20.97
+    license: MiniMax H3 Community License Agreement (see MiniMaxAI/MiniMax-H3 LICENSE)
+    tags: [video, minimax-h3, optional]
+    profiles: [cloud, cloud-80gb]
+
+  - name: minimax-h3-fl2va-int8
+    desc: MiniMax H3 FL2VA pruned INT8 (image-to-video and text-to-video)
+    source: huggingface
+    repo: Comfy-Org/MiniMax-H3
+    file: diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors
+    dest: models/diffusion_models
+    sha256: E889202C41DAFB67B10D67B97F0D8541508036A6090AF23425A5C2615D03C47A
+    size_gb: 20.97
+    license: MiniMax H3 Community License Agreement (see MiniMaxAI/MiniMax-H3 LICENSE)
+    tags: [video, minimax-h3, optional]
+    profiles: [cloud, cloud-80gb]
+
+  - name: minimax-h3-text-encoder
+    desc: Qwen3-VL-32B text encoder for H3 (nvfp4_awq quant)
+    source: huggingface
+    repo: Comfy-Org/MiniMax-H3
+    file: text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+    dest: models/text_encoders
+    sha256: 35A88D51044231FE332301D7A62AA81E3F2CBA62FEBEB446E2C1E3E0EF76F2C6
+    size_gb: 15.69
+    license: MiniMax H3 Community License Agreement (see MiniMaxAI/MiniMax-H3 LICENSE)
+    tags: [video, minimax-h3, optional]
+    profiles: [cloud, cloud-80gb]
+
+  - name: minimax-h3-video-vae
+    desc: MiniMax H3 video VAE (required — decodes the picture)
+    source: huggingface
+    repo: Comfy-Org/MiniMax-H3
+    file: vae/minimax_h3_video_vae_fp16.safetensors
+    dest: models/vae
+    sha256: 7C1F131492E7EDDACAAC9069A61B81BDD39DE5CC96561E677C5EAB1CDCE5E522
+    size_gb: 5.21
+    license: MiniMax H3 Community License Agreement (see MiniMaxAI/MiniMax-H3 LICENSE)
+    tags: [video, minimax-h3, optional]
+    profiles: [local-24gb, cloud, cloud-80gb]
+
+  - name: minimax-h3-audio-vae
+    desc: MiniMax H3 audio VAE (required — decodes the sound; H3 makes both)
+    source: huggingface
+    repo: Comfy-Org/MiniMax-H3
+    file: vae/minimax_h3_audio_vae_fp32.safetensors
+    dest: models/vae
+    sha256: 8E505D95DD1561D47ABD43D4238FD40D9BB1AE9E147ED0A4CBA778D76AE4DB48
+    size_gb: 0.61
+    license: MiniMax H3 Community License Agreement (see MiniMaxAI/MiniMax-H3 LICENSE)
+    tags: [video, minimax-h3, optional]
+    profiles: [local-24gb, cloud, cloud-80gb]
+
+  # GGUF variants for 24GB-class cards (loaded via the ComfyUI-GGUF node from
+  # models/unet). Still needs heavy offloading — expect slow renders.
+  - name: minimax-h3-ref2va-gguf-q4km
+    desc: MiniMax H3 Ref2VA GGUF Q4_K_M (24GB-class cards, with offload)
+    source: huggingface
+    repo: Abiray/MiniMax-H3-GGUF
+    file: unet/MiniMax-H3-Ref2VA-Q4_K_M.gguf
+    dest: models/unet
+    sha256: 1471161B5039BC26FCB425F4A8AD415EF6B36BAB79E9066C1FA4444342B8BF18
+    size_gb: 19.85
+    license: MiniMax H3 Community License Agreement (community GGUF requant)
+    tags: [video, minimax-h3, optional]
+    profiles: [local-24gb]
+
+  - name: minimax-h3-fl2va-gguf-q4km
+    desc: MiniMax H3 FL2VA GGUF Q4_K_M (24GB-class cards, with offload)
+    source: huggingface
+    repo: Abiray/MiniMax-H3-GGUF
+    file: unet/MiniMax-H3-FL2VA-Q4_K_M.gguf
+    dest: models/unet
+    sha256: D66125A46C9BEE7DE3586420843263D9C5185A8D5516949F13B21CD85516E37B
+    size_gb: 19.86
+    license: MiniMax H3 Community License Agreement (community GGUF requant)
+    tags: [video, minimax-h3, optional]
+    profiles: [local-24gb]
+
+  - name: minimax-h3-text-encoder-gguf
+    desc: Qwen3-VL-32B text encoder for H3, GGUF Q4_K_M (24GB-class cards)
+    source: huggingface
+    repo: Abiray/MiniMax-H3-GGUF
+    file: text_encoders/qwen3vl_32b_minimax_h3-Q4_K_M.gguf
+    dest: models/text_encoders
+    sha256: CCFAA8D786CAFCE211CB4CD3AB69B64A5240F124EB237D62C0178E58D3BA5121
+    size_gb: 14.58
+    license: MiniMax H3 Community License Agreement (community GGUF requant)
+    tags: [video, minimax-h3, optional]
+    profiles: [local-24gb]
+
   # ────────────────────────── IMAGE STACK ──────────────────────────
 
   # ── Qwen Image Edit 2511: instruction-based editing (same character, new

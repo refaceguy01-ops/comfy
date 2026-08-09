@@ -8,6 +8,7 @@ from __future__ import annotations
 import io
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -100,6 +101,64 @@ def _github_zip(repo: str, dest_parent: Path, dest_name: str | None = None) -> P
             shutil.rmtree(final)
         extracted.replace(final)
     return final
+
+
+# MiniMax H3 needs native support that landed in ComfyUI 0.30.0.
+MIN_COMFY_VERSION = (0, 30, 0)
+
+
+def _parse_version(text: str) -> tuple | None:
+    m = re.search(r'__version__\s*=\s*["\']([0-9]+)\.([0-9]+)\.([0-9]+)', text) or \
+        re.search(r'^version\s*=\s*["\']([0-9]+)\.([0-9]+)\.([0-9]+)', text, re.M)
+    return tuple(int(g) for g in m.groups()) if m else None
+
+
+def comfy_version(comfy_root: Path) -> tuple | None:
+    """(major, minor, patch) of the installed ComfyUI, or None if unknown."""
+    for rel in ("comfyui_version.py", "pyproject.toml"):
+        f = comfy_root / rel
+        if f.exists():
+            v = _parse_version(f.read_text(encoding="utf-8", errors="ignore"))
+            if v:
+                return v
+    return None
+
+
+def version_str(v: tuple | None) -> str:
+    return ".".join(str(p) for p in v) if v else "unknown"
+
+
+def ensure_comfy_version(comfy_root: Path, log=print,
+                         minimum: tuple = MIN_COMFY_VERSION) -> tuple | None:
+    """Upgrade ComfyUI if it's older than `minimum`. Raises a plain-English
+    RuntimeError if it still isn't new enough afterwards."""
+    current = comfy_version(comfy_root)
+    if current and current >= minimum:
+        log(f"ComfyUI {version_str(current)} (needs {version_str(minimum)}+) — OK")
+        return current
+
+    log(f"ComfyUI {version_str(current)} is older than "
+        f"{version_str(minimum)} — upgrading (needed for MiniMax H3)…")
+    try:
+        update_comfy(comfy_root, log=log)
+    except Exception as exc:
+        raise RuntimeError(
+            "Couldn't update ComfyUI automatically, and the version you have is "
+            f"too old for MiniMax H3 (you have {version_str(current)}, need "
+            f"{version_str(minimum)} or newer).\n"
+            "Fix: open ComfyUI's Manager and choose 'Update ComfyUI', then run "
+            f"Setup again. (Details: {exc})") from exc
+
+    updated = comfy_version(comfy_root)
+    if not updated or updated < minimum:
+        raise RuntimeError(
+            f"ComfyUI is still {version_str(updated)} after updating, but MiniMax "
+            f"H3 needs {version_str(minimum)} or newer.\n"
+            "Fix: open ComfyUI's Manager and choose 'Update ComfyUI' (or "
+            "reinstall it), then run Setup again. Everything else in this repo "
+            "works fine on your current version.")
+    log(f"ComfyUI upgraded to {version_str(updated)}")
+    return updated
 
 
 def comfy_python(comfy_root: Path) -> list[str]:

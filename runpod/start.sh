@@ -14,7 +14,15 @@ WORKSPACE="${WORKSPACE:-/workspace}"
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMFY="$WORKSPACE/ComfyUI"
 export COMFY_DIR="$COMFY"
+# Every cache/offload dir must live on the NETWORK VOLUME, not container disk:
+# it survives migrations, and MiniMax H3's dynamic VRAM offloading spills to
+# disk (container disk is small and ephemeral).
 export HF_HOME="$WORKSPACE/.hf_cache"
+export HUGGINGFACE_HUB_CACHE="$WORKSPACE/.hf_cache"
+export TORCH_HOME="$WORKSPACE/.torch_cache"
+export TMPDIR="$WORKSPACE/.tmp"
+COMFY_TEMP="$WORKSPACE/.comfy_temp"
+mkdir -p "$HF_HOME" "$TORCH_HOME" "$TMPDIR" "$COMFY_TEMP"
 # Always use this pod's system python (resolve the absolute path now, before uv
 # shadows it on PATH). The runpod/pytorch images ship torch in it.
 export COMFY_SYSTEM_PYTHON="$(command -v python3)"
@@ -53,6 +61,7 @@ runpod:
   base_path: $COMFY/models
   checkpoints: checkpoints
   diffusion_models: diffusion_models
+  unet: unet
   loras: loras
   vae: vae
   text_encoders: text_encoders
@@ -60,7 +69,9 @@ runpod:
   ipadapter: ipadapter
   controlnet: controlnet
   upscale_models: upscale_models
+  foley: foley
 EOF
+mkdir -p "$COMFY"/models/{diffusion_models,unet,text_encoders,vae,loras,checkpoints,foley}
 
 # 2. First boot with an empty volume and no saved keys -> browser wizard
 if [ ! -f "$REPO_DIR/.env" ] || ! grep -q "CIVITAI_API_TOKEN=." "$REPO_DIR/.env"; then
@@ -77,6 +88,13 @@ fi
 
 # 3. Provision node folders (clones missing ones onto the volume) + models +
 #    workflows. Idempotent; fast when the volume is already populated.
+#
+# 3a. ComfyUI version gate FIRST: MiniMax H3 needs >= 0.30.0, and pods created
+#     from older templates sit on 0.27.x. Upgrading before sync/workflows means
+#     adding a model to the manifest is all it takes for an existing pod to
+#     pick it up on the next boot, with zero terminal work.
+uv run --python 3.12 provision.py --comfy-dir "$COMFY" comfy-version || \
+    echo "[start.sh] WARNING: ComfyUI version check failed — H3 workflows may not load."
 uv run --python 3.12 provision.py --comfy-dir "$COMFY" nodes || true
 uv run --python 3.12 provision.py --profile cloud --comfy-dir "$COMFY" sync || true
 uv run --python 3.12 provision.py --comfy-dir "$COMFY" workflows || true
@@ -119,4 +137,5 @@ cd "$COMFY"
 echo "[start.sh] Starting ComfyUI on :8188"
 # --enable-cors-header: ComfyUI's host/origin check 403s behind RunPod's proxy
 # (github.com/Comfy-Org/ComfyUI/issues/4865); this flag relaxes it.
-exec "$PYBIN" main.py --listen 0.0.0.0 --port 8188 --enable-cors-header
+exec "$PYBIN" main.py --listen 0.0.0.0 --port 8188 --enable-cors-header \
+    --temp-directory "$COMFY_TEMP"

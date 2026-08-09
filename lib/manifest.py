@@ -20,6 +20,7 @@ ALLOWED_DESTS = {
     "models/vae", "models/text_encoders", "models/clip_vision",
     "models/ipadapter", "models/controlnet", "models/upscale_models",
     "models/foley",
+    "models/unet",   # ComfyUI-GGUF loads quantized UNETs from here
 }
 
 
@@ -81,12 +82,21 @@ class Manifest(BaseModel):
             raise ValueError(f"duplicate entry names: {sorted(dupes)}")
         return self
 
-    def entries_for(self, profile: str, include_optional: bool = True) -> list[ModelEntry]:
+    def entries_for(self, profile: str, include_optional: bool = True,
+                    exclude_tags: set[str] | None = None) -> list[ModelEntry]:
+        """Entries this profile needs.
+
+        exclude_tags drops whole model families the user opted out of (the
+        wizard uses this for the very large MiniMax H3 set).
+        """
+        exclude = set(exclude_tags or ())
         out = []
         for entry in self.models + self.user_loras:
             if entry.profiles and profile not in entry.profiles:
                 continue
             if not include_optional and "optional" in entry.tags:
+                continue
+            if exclude & set(entry.tags):
                 continue
             out.append(entry)
         return out

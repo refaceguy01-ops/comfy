@@ -33,7 +33,10 @@ Interrupted downloads always continue where they left off.
 ## Install on RunPod (rented cloud GPU)
 
 1. On [runpod.io](https://runpod.io): **Storage → New Network Volume** —
-   pick **150 GB or more** (the models live here permanently; pods come and go).
+   pick **300 GB** (the models live here permanently; pods come and go).
+   Why 300: the full cloud model set is **~224 GB** (of which MiniMax H3 is
+   ~63 GB), plus ComfyUI and its Python packages, plus room for your renders and
+   H3's disk offloading. If you skip H3, 200 GB is enough.
 2. **Deploy a pod** using this repo's Docker image as a template
    (see `runpod/Dockerfile` header for the template fields), attach your volume,
    and expose HTTP ports **8188** and **8189**.
@@ -47,10 +50,18 @@ Interrupted downloads always continue where they left off.
 
 | GPU | VRAM | Good for | Ballpark cost |
 |---|---|---|---|
-| RTX 4090 / L40S / A6000 | 24–48 GB | everything here, standard quality | $ |
-| A100 / H100 | 80 GB | the fp16 "maximum quality" video tier | $$$ |
+| RTX 4090 / 5090 | 24–32 GB | Wan 2.2 video, all image work, LoRA training. **H3 only with heavy offloading — slow** | $ |
+| L40S / A6000 | 48 GB | **the H3 minimum I'd recommend** — H3 fits without thrashing | $$ |
+| A100 / H100 | 80 GB | comfortable 2K H3 work and the fp16 video tier | $$$ |
 
-24–48 GB is the sweet spot; only rent 80 GB if you specifically want fp16 video.
+- **Not using MiniMax H3?** 24–48 GB is the sweet spot; nothing else here needs more.
+- **Using H3?** Rent **48 GB or more**. H3's smallest footprint is **42.5 GB**
+  (transformer + text encoder + both VAEs), so a 24 GB card has to shuffle
+  weights between GPU and system RAM constantly. It runs — ComfyUI's dynamic
+  offloading even makes it work on small cards — but it is *much* slower.
+- **Honest gap:** nobody has published reliable H3 render times yet, and I
+  haven't measured them. Expect it to be **several times slower than Wan 2.2**
+  and budget your pod hours accordingly rather than trusting a number.
 
 ## What's in the box
 
@@ -59,6 +70,14 @@ Interrupted downloads always continue where they left off.
   Uses the Wan 2.2 Remix creative model; optional 4-step "Lightning" turbo mode.
 - `wan22_i2v_firstlast` — give a first **and** last frame; it animates between
   them. Perfect for planned shot transitions.
+
+**Video with sound (MiniMax H3 — optional, cloud/48 GB+):**
+- `minimax_h3_r2v` — **the H3 workflow**: mix up to 9 reference images, 3
+  reference videos and 3 reference audio clips, tag them in the prompt, and get
+  2K video with synchronized sound. See "Video with sound" below.
+- `minimax_h3_i2v` — one still image → video with sound.
+- `minimax_h3_t2v` — prompt only, no image (secondary; the rest of this repo is
+  deliberately reference-driven).
 
 **Images (SDXL, Qwen & Chroma):**
 - `qwen_edit_character` — **the character workflow**: give it a photo + an
@@ -94,6 +113,52 @@ English.
 - **Trigger word** — a short made-up word (like `ohwxwoman`) that you assign to a
   character LoRA when training it. Typing that word in a prompt summons the
   character; leaving it out means they won't appear.
+
+## Video with sound (MiniMax H3)
+
+**What it is.** MiniMax H3 (Hailuo 3.0) generates video **and its own audio at
+the same time** — dialogue, sound effects and music in a single pass, not dubbed
+on afterwards. Output is up to **2K, 24fps, about 5–15 seconds** per clip.
+
+**It's optional and big.** ~63 GB of models, and it needs a 48 GB GPU to be
+pleasant. The wizard asks before downloading it, and you can add it later from
+the Setup menu. On a 12 GB laptop it isn't offered at all — it genuinely
+can't run there.
+
+### Pointing it at your references
+
+This is the part that's different from every other workflow here. You connect
+reference images/videos/audio, then **refer to them in the prompt by tag**:
+
+- `<Picture 1>`, `<Picture 2>` … up to **9** reference images
+- `<Video 1>` … up to **3** reference videos
+- `<Audio 1>` … up to **3** reference audio clips
+
+> *"Use `<Picture 1>` as the character and `<Audio 1>` exactly as it is. She
+> walks through neon rain at night, camera pushing in slowly."*
+
+The numbers follow **the order you connected the inputs**, not the node names —
+so if you rewire something, renumber the tags in your prompt to match.
+
+### ⚠ Always listen to the audio before you use it
+
+The sound is generated, not recorded, and it is **not reliable**. Speech can
+come out garbled, mistimed, or in a voice you didn't ask for. Treat every clip's
+audio as a draft: **listen to it before using it anywhere**, and if it misses,
+change the seed or describe the sound more concretely in the prompt.
+
+### H3 or Wan 2.2 Remix?
+
+| | **Wan 2.2 Remix** | **MiniMax H3** |
+|---|---|---|
+| Resolution | 720p | up to 2K |
+| Sound | none | yes, generated with the picture |
+| References | 1 image (or first+last) | up to 9 images + 3 videos + 3 audio |
+| Speed / size | fast, ~22 GB | much slower, ~63 GB, needs 48 GB VRAM |
+
+**Use Wan** for iterating, silent b-roll, and anything on a smaller GPU. **Use
+H3** for finished shots that need sound, or that need several references (a
+character *and* a style *and* a voice) held together at once.
 
 ## Train your own character (make a custom LoRA)
 

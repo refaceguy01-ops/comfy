@@ -68,15 +68,24 @@ def _provision_thread(opts: dict):
         # 2. Models
         profile = opts.get("profile") or comfy.pick_profile(
             comfy.detect_gpu().get("vram_gb"))
+        # Include H3 when the user opted in — or when any H3 file is already on
+        # disk, so "check for missing files" repairs an existing H3 install
+        # instead of silently skipping it.
+        h3_entries = [e for e in manifest.entries_for(profile)
+                      if "minimax-h3" in e.tags]
+        h3_present = any(downloader.is_present_and_valid(e, root) for e in h3_entries)
+        exclude = set() if (opts.get("minimax_h3") or h3_present) else {"minimax-h3"}
         plan = downloader.dry_run(manifest, profile, root,
-                                  include_optional=opts.get("optional", True))
+                                  include_optional=opts.get("optional", True),
+                                  exclude_tags=exclude)
         _set(phase="downloading", total=len(plan["to_download"]), done=0,
              message=f"Downloading {len(plan['to_download'])} files "
                      f"({plan['total_gb']} GB)…")
         report = downloader.sync(
             manifest, profile, root, include_optional=opts.get("optional", True),
             status_cb=lambda d, t, n: _set(done=d, total=t, current=n,
-                                           message=f"Downloading model {d} of {t}: {n}"))
+                                           message=f"Downloading model {d} of {t}: {n}"),
+            exclude_tags=exclude)
         for name, err in report.failed.items():
             STATE["errors"].append(f"{name}: {err}")
 
@@ -138,7 +147,10 @@ class Handler(BaseHTTPRequestHandler):
         profile = comfy.pick_profile(gpu.get("vram_gb"))
         manifest = load_manifest()
         root = detected or Path("~")
-        plan = downloader.dry_run(manifest, profile, Path(root).expanduser())
+        h3 = [e for e in manifest.entries_for(profile) if "minimax-h3" in e.tags]
+        # base plan excludes H3 — it's a separate, very large opt-in
+        plan = downloader.dry_run(manifest, profile, Path(root).expanduser(),
+                                  exclude_tags={"minimax-h3"})
         gated = any(e.gated for e in manifest.entries_for(profile))
         return {
             "comfy_dir": str(detected) if detected else None,
@@ -151,6 +163,8 @@ class Handler(BaseHTTPRequestHandler):
             "free_gb": plan["free_disk_gb"],
             "missing_count": len(plan["to_download"]),
             "total_count": len(manifest.entries_for(profile)),
+            "h3_available": bool(h3),
+            "h3_gb": round(sum(e.size_gb for e in h3), 1),
         }
 
     def do_POST(self):
@@ -332,11 +346,23 @@ function showConfirm(){$('#app').innerHTML=`
  <p class="muted">This is a one-time download and it's safe to interrupt —
  running Setup again continues where it left off.</p>
  ${S.install?'<p class="muted">ComfyUI itself will be installed first.</p>':''}
+ ${S.h3_available?`
+ <div class="card" style="background:#181b21;margin-top:18px">
+  <label class="big" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
+   <input type="checkbox" id="h3" style="margin-top:5px;width:18px;height:18px">
+   <span><b>Also add MiniMax H3</b> (+${S.h3_gb} GB)</span></label>
+  <p class="muted">2K video <b>with synchronized sound</b> — voices, effects and
+  music generated together — built from reference images (up to 9), so you can
+  lock a character's look, a style, or a voice. Much heavier and slower than
+  Wan 2.2: only worth it for finished shots that need sound or several
+  references. You can add it later from the menu.</p>
+ </div>`:''}
  <button onclick="start()">Yes, download everything</button>
  <button class="alt" onclick="showMenu()">Not now</button>`;}
 async function start(){
+ const h3=$('#h3')&&$('#h3').checked;
  await api('/api/start',{install_comfy:!!S.install,
-   install_dir:'~',optional:true});
+   install_dir:'~',optional:true,minimax_h3:!!h3});
  showProgress();}
 
 function showProgress(){$('#app').innerHTML=`
@@ -365,8 +391,9 @@ function showMenu(){$('#app').innerHTML=`
  <button onclick="checkFiles()">1 · Check for missing files</button><br>
  <button onclick="showLora()">2 · Add a LoRA (paste a Civitai link)</button><br>
  <button onclick="showTrain()">3 · Train a character LoRA</button><br>
- <button onclick="reWf()">4 · Reinstall workflows</button><br>
- <button onclick="launch()">5 · Launch ComfyUI</button><br>
+ ${S.h3_available?`<button onclick="addH3()">4 · Add MiniMax H3 video (+${S.h3_gb} GB)</button><br>`:''}
+ <button onclick="reWf()">${S.h3_available?5:4} · Reinstall workflows</button><br>
+ <button onclick="launch()">${S.h3_available?6:5} · Launch ComfyUI</button><br>
  <button class="alt" onclick="showHelp()">Help</button>
  <p id="mmsg" class="muted"></p>`;}
 function showTrain(){$('#app').innerHTML=`
@@ -401,6 +428,10 @@ function showTrain(){$('#app').innerHTML=`
  <button class="alt" onclick="showMenu()">Back</button>
  <p id="mmsg" class="muted"></p>`;}
 async function checkFiles(){await api('/api/start',{optional:true});showProgress();}
+async function addH3(){
+ if(!confirm('Download MiniMax H3? About '+S.h3_gb+' GB. It adds 2K video with '
+  +'synchronized sound, driven by reference images.')) return;
+ await api('/api/start',{optional:true,minimax_h3:true});showProgress();}
 function showLora(){$('#app').innerHTML=`
  <h2>Add a LoRA</h2>
  <p class="muted">Paste the address of a LoRA's page on Civitai (from your browser's

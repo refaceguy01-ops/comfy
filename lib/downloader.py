@@ -108,7 +108,10 @@ def download_entry(entry: ModelEntry, comfy_root: Path) -> Path:
     target = entry.target_path(comfy_root)
     if entry.source == "huggingface":
         huggingface.download(entry.repo, entry.file, target)
-        _record_license(entry, f"see huggingface.co/{entry.repo} (license on model card)")
+        # a manifest-declared license wins (e.g. MiniMax H3's Community License,
+        # which is NOT MIT); otherwise point at the model card.
+        _record_license(entry, entry.license or
+                        f"see huggingface.co/{entry.repo} (license on model card)")
     elif entry.source == "civitai":
         version = civitai.get_version(entry.version_id)
         # record license from the parent model page for the commercial-use audit
@@ -137,12 +140,13 @@ def download_entry(entry: ModelEntry, comfy_root: Path) -> Path:
 
 
 def sync(manifest: Manifest, profile: str, comfy_root: Path,
-         include_optional: bool = True, status_cb=None) -> SyncReport:
+         include_optional: bool = True, status_cb=None,
+         exclude_tags: set[str] | None = None) -> SyncReport:
     """Download everything the profile needs. Idempotent. status_cb(done, total, name)."""
-    entries = [e for e in manifest.entries_for(profile, include_optional)
+    entries = [e for e in manifest.entries_for(profile, include_optional, exclude_tags)
                if not is_present_and_valid(e, comfy_root)]
     report = SyncReport()
-    already = [e.name for e in manifest.entries_for(profile, include_optional)
+    already = [e.name for e in manifest.entries_for(profile, include_optional, exclude_tags)
                if is_present_and_valid(e, comfy_root)]
     report.skipped.extend(already)
 
@@ -175,10 +179,11 @@ def sync(manifest: Manifest, profile: str, comfy_root: Path,
 
 
 def dry_run(manifest: Manifest, profile: str, comfy_root: Path,
-            include_optional: bool = True) -> dict:
+            include_optional: bool = True,
+            exclude_tags: set[str] | None = None) -> dict:
     """What would be downloaded, and total size, without touching the network."""
     todo, have = [], []
-    for entry in manifest.entries_for(profile, include_optional):
+    for entry in manifest.entries_for(profile, include_optional, exclude_tags):
         (have if is_present_and_valid(entry, comfy_root) else todo).append(entry)
     free_gb = shutil.disk_usage(comfy_root if comfy_root.exists() else Path.cwd()).free / 1e9
     return {
